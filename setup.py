@@ -1,10 +1,29 @@
 from setuptools import setup, find_packages
+from pathlib import Path
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
+# Get the long description from README.md
+readme_path = Path(__file__).parent / "README.md"
+if readme_path.exists():
+    with open(readme_path, "r", encoding="utf-8") as fh:
+        long_description = fh.read()
+else:
+    long_description = "A Python wrapper for ClickHouse database operations"
 
-with open("requirements.txt", "r", encoding="utf-8") as fh:
-    requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+# Get requirements from requirements.txt
+requirements_path = Path(__file__).parent / "requirements.txt"
+if requirements_path.exists():
+    with open(requirements_path, "r", encoding="utf-8") as fh:
+        requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+        # Filter out test dependencies (pytest, pytest-cov)
+        requirements = [req for req in requirements if not req.startswith("pytest")]
+else:
+    # Fallback if requirements.txt is not found
+    requirements = [
+        "clickhouse-connect>=0.6.0",
+        "pandas>=1.5.0",
+        "numpy>=1.20.0",
+        "pyarrow>=10.0.0",
+    ]
 
 setup(
     name="chpy-orm",

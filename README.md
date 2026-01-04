@@ -1,6 +1,6 @@
-# chpy - ClickHouse Python Wrapper
+# chpy-orm - ClickHouse Python Wrapper
 
-A comprehensive Python library for programmatically querying and managing ClickHouse databases. `chpy` provides a fluent, ORM-style interface with type safety, autocomplete support, and extensive ClickHouse function coverage.
+A comprehensive Python library for programmatically querying and managing ClickHouse databases. `chpy-orm` provides a fluent, ORM-style interface with type safety, autocomplete support, and extensive ClickHouse function coverage.
 
 ## Acknowledgments
 
@@ -21,7 +21,7 @@ This project is developed mainly using [Cursor](https://cursor.sh), an AI-powere
 ## Installation
 
 ```bash
-pip install -r requirements.txt
+pip install chpy-orm
 ```
 
 Or install in development mode:

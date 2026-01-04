@@ -195,7 +195,8 @@ class Function:
             # Handle Function, AggregateFunction, or any object with to_sql method
             return arg.to_sql()
         elif isinstance(arg, str):
-            return f"'{arg.replace("'", "''")}'"  # Escape single quotes
+            escaped = arg.replace("'", "''")
+            return f"'{escaped}'"  # Escape single quotes
         elif isinstance(arg, (list, tuple)):
             # Format array arguments
             formatted = ', '.join(self._format_arg(item) for item in arg)

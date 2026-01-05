@@ -18,6 +18,33 @@ This project is developed mainly using [Cursor](https://cursor.sh), an AI-powere
 - 📦 **Type System** - Support for all ClickHouse data types (Arrays, Maps, Tuples, Nested, etc.)
 - 🎨 **Generic Table Wrapper** - Works with any ClickHouse table, not just crypto_quotes
 
+## Table of Contents
+
+- [Acknowledgments](#acknowledgments)
+- [Features](#features)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Quick Start](#quick-start)
+  - [Basic Connection](#basic-connection)
+  - [Using Context Manager](#using-context-manager)
+- [API Reference](#api-reference)
+  - [ClickHouseClient](#clickhouseclient)
+  - [TableWrapper](#tablewrapper)
+  - [CryptoQuotesTable](#cryptoquotestable)
+  - [QueryBuilder](#querybuilder)
+  - [ORM Classes](#orm-classes)
+  - [DDL](#ddl)
+  - [Functions](#functions)
+  - [WindowSpec](#windowspec)
+- [Best Practices](#best-practices)
+- [Table Schema](#table-schema)
+- [License](#license)
+- [Contributing](#contributing)
+- [Support](#support)
+- [Basic Examples](#basic-examples)
+- [Intermediate Examples](#intermediate-examples)
+- [Advanced Examples](#advanced-examples)
+
 ## Installation
 
 ```bash
@@ -32,7 +59,7 @@ pip install -e .
 
 ### Requirements
 
-- Python 3.8+
+- Python 3.9+
 - clickhouse-connect
 - pandas (optional, for DataFrame support)
 - numpy (optional, for NumPy array support)
@@ -42,7 +69,57 @@ pip install -e .
 ### Basic Connection
 
 ```python
-from chpy import ClickHouseClient, CryptoQuotesTable
+from typing import Optional, List
+from chpy import ClickHouseClient, Array, LowCardinality, String, Float64, UInt64
+from chpy.tables import TableWrapper
+from chpy.orm import Table, Column
+
+# Define crypto_quotes table schema
+crypto_quotes_columns = [
+    Column("pair", String),
+    Column("best_bid_price", Float64),
+    Column("best_bid_size", Float64),
+    Column("best_ask_price", Float64),
+    Column("best_ask_size", Float64),
+    Column("bid_prices", Array(Float64)),
+    Column("bid_sizes", Array(Float64)),
+    Column("ask_prices", Array(Float64)),
+    Column("ask_sizes", Array(Float64)),
+    Column("timestamp_ms", UInt64),
+    Column("exchange", LowCardinality(String)),
+    Column("sequence_number", UInt64),
+    Column("inserted_at", UInt64),
+]
+
+# Create table instance
+crypto_quotes = Table("crypto_quotes", "stockhouse", crypto_quotes_columns)
+crypto_quotes_schema = crypto_quotes  # Alias for clarity when used as schema parameter
+
+# CryptoQuotesTable definition
+class CryptoQuotesTable(TableWrapper):
+    """
+    Programmatic wrapper for the crypto_quotes table.
+    
+    Provides a high-level interface to query crypto quotes data
+    without writing SQL directly. Inherits from TableWrapper for
+    generic table functionality.
+    """
+    
+    def __init__(self, client: ClickHouseClient, database: str = "stockhouse"):
+        """
+        Initialize CryptoQuotesTable wrapper.
+        
+        Args:
+            client: ClickHouseClient instance
+            database: Database name (default: 'stockhouse')
+        """
+        # Initialize base class with crypto_quotes table and schema
+        super().__init__(
+            client=client,
+            table_name="crypto_quotes",
+            database=database,
+            schema=crypto_quotes_schema
+        )
 
 # Initialize the client
 client = ClickHouseClient(
@@ -68,6 +145,8 @@ print(df)
 ### Using Context Manager
 
 ```python
+# CryptoQuotesTable is defined above (see Basic Connection section)
+
 with ClickHouseClient(host="localhost", database="stockhouse") as client:
     table = CryptoQuotesTable(client)
     results = table.query().where(table.c.pair == "BTC-USDT").to_list()
@@ -76,12 +155,381 @@ with ClickHouseClient(host="localhost", database="stockhouse") as client:
 
 ---
 
+## API Reference
+
+### ClickHouseClient
+
+Base client for ClickHouse operations.
+
+#### Initialization
+
+```python
+client = ClickHouseClient(
+    host="localhost",
+    port=8123,
+    username="default",
+    password="",
+    database="default",
+    **kwargs  # Additional connection parameters
+)
+```
+
+#### Methods
+
+- `execute(query, parameters=None)` - Execute a SELECT query, returns list of dicts
+- `query_df(query, parameters=None)` - Execute query, returns pandas DataFrame
+- `query_np(query, parameters=None)` - Execute query, returns numpy array
+- `query_arrow(query, parameters=None)` - Execute query, returns PyArrow Table
+- `execute_command(query, parameters=None)` - Execute non-SELECT command (INSERT, CREATE, etc.)
+- `insert(table, data)` - Insert data into a table
+- `close()` - Close the connection
+
+#### Context Manager
+
+```python
+with ClickHouseClient(...) as client:
+    # Use client
+    pass  # Connection automatically closed
+```
+
+### TableWrapper
+
+Generic wrapper for any ClickHouse table.
+
+#### Initialization
+
+```python
+table = TableWrapper(
+    client=client,
+    table_name="my_table",
+    database="my_db",
+    schema=optional_table_schema  # Optional Table object for type safety
+)
+```
+
+#### Methods
+
+- `query()` - Start building a query, returns QueryBuilder
+- `insert(data)` - Insert data into the table
+- `c` or `columns` - Access to schema columns (if schema provided)
+
+### CryptoQuotesTable
+
+Specialized wrapper for the `crypto_quotes` table, extends `TableWrapper`.
+
+#### Initialization
+
+```python
+table = CryptoQuotesTable(client, database="stockhouse")
+```
+
+#### Helper Methods
+
+- `get_valid_exchanges()` - Get list of valid exchange names
+- `get_exchange_base_currencies(exchange)` - Get base currencies for exchange
+- `get_exchange_currencies(exchange)` - Get supported currencies for exchange
+- `get_exchange_pairs(exchange)` - Get all valid trading pairs for exchange
+- `is_valid_pair(pair, exchange=None)` - Check if trading pair is valid
+- `get_all_valid_pairs()` - Get all valid trading pairs across all exchanges
+
+### QueryBuilder
+
+Fluent query builder returned by `table.query()`.
+
+#### Filtering Methods
+
+- `where(condition)` - Add WHERE condition (chainable)
+  - Accepts: ColumnExpression, CombinedExpression, SubqueryExpression, or raw SQL string
+- `having(condition)` - Add HAVING clause for GROUP BY queries (chainable)
+
+#### Query Building Methods
+
+- `select(*columns)` - Specify columns to select (chainable)
+  - Accepts: Column objects, Function objects, AggregateFunction objects, Subquery objects, or raw SQL strings
+- `join(table, condition=None, join_type="INNER", alias=None)` - Add JOIN clause (chainable)
+  - `table`: Table object or table name string
+  - `condition`: ColumnExpression, CombinedExpression, or raw SQL string (required except for CROSS JOIN)
+  - `join_type`: "INNER", "LEFT", "RIGHT", "FULL", or "CROSS"
+  - `alias`: Optional table alias
+- `from_subquery(subquery, alias)` - Use subquery as FROM clause (chainable)
+- `order_by(column, desc=True)` - Specify ordering (chainable)
+- `limit(n)` - Limit number of results (chainable)
+- `group_by(*columns)` - Group by columns (chainable)
+
+#### Execution Methods
+
+- `to_list()` - Execute and return as list of Row objects (if schema) or dictionaries
+- `to_dict(key_column, value_column=None)` - Execute and return as dictionary
+- `to_dataframe()` - Execute and return as pandas DataFrame
+- `to_numpy(columns=None, dtype=None)` - Execute and return as numpy array
+- `to_json(indent=None)` - Execute and return as JSON string
+- `to_csv(path=None, **kwargs)` - Execute and return/write CSV
+- `to_parquet(path, **kwargs)` - Execute and write Parquet file
+- `count()` - Count rows matching filters
+- `first()` - Get first result (or None)
+- `exists()` - Check if any rows match (returns bool)
+- `__iter__()` - Make query builder iterable
+
+### ORM Classes
+
+#### Table
+
+Represents a database table with columns.
+
+```python
+table = Table(name="my_table", database="my_db", columns=[...])
+```
+
+#### Column
+
+Represents a database column.
+
+```python
+column = Column(name="pair", type_="String", table=optional_table)
+```
+
+Column objects support:
+- Comparison operators: `==`, `!=`, `<`, `<=`, `>`, `>=`
+- `in_(values)` - IN operator
+- `not_in(values)` - NOT IN operator
+- `like(pattern)` - LIKE operator
+- Can be combined with `&` (AND) and `|` (OR)
+
+#### Row
+
+Represents a row from a query result.
+
+- Attribute access: `row.column_name`
+- Dictionary access: `row['column_name']`
+- `get(key, default)` - Get with default
+- `to_dict()` - Convert to dictionary
+
+### DDL
+
+High-level DDL operations for table and database management.
+
+#### Methods
+
+- `create_table(table, columns=None, database=None, engine="MergeTree", order_by=None, ...)`
+- `drop_table(table, database=None, if_exists=True)`
+- `add_column(table, column, database=None, after=None, if_not_exists=True)`
+- `drop_column(table, column_name, database=None, if_exists=True)`
+- `modify_column(table, column, database=None)`
+- `rename_table(old_table, new_name, database=None)`
+- `create_database(database, if_not_exists=True, engine=None, settings=None)`
+- `drop_database(database, if_exists=True)`
+- `create_materialized_view(view, to_table, select_query, ...)`
+- `drop_materialized_view(view, database=None, if_exists=True)`
+- `create_distributed_table(table, cluster, local_table, ...)`
+
+### Functions
+
+The library provides comprehensive ClickHouse function coverage. Import from `chpy.functions`:
+
+```python
+from chpy.functions import (
+    # Aggregate
+    count, sum, avg, min, max, quantile, stddevPop, stddevSamp,
+    # String
+    length, upper, lower, substring, concat, startsWith, endsWith,
+    # Date/Time
+    toYear, toMonth, toDayOfMonth, toHour, addDays, subtractDays,
+    # Math
+    abs, sqrt, round, floor, ceil,
+    # Type conversion
+    toString, toInt64, toFloat64, toDateTime,
+    # Conditional
+    if_ as if_func, coalesce,
+    # Array
+    array, arraySum, arrayAvg, arrayMax, arrayMin,
+    # And many more...
+)
+```
+
+All functions support:
+- `.alias(name)` - Set column alias
+- `.over(window_spec)` - Add OVER clause for window functions
+
+### WindowSpec
+
+Window specification for OVER clauses.
+
+```python
+from chpy.functions.base import WindowSpec
+
+WindowSpec()
+    .partition_by(column1, column2)
+    .order_by(column3, desc=True)
+    .rows_between("UNBOUNDED PRECEDING", "CURRENT ROW")
+```
+
+#### Methods
+
+- `partition_by(*columns)` - Add PARTITION BY clause
+- `order_by(*columns, desc=False)` - Add ORDER BY clause
+- `rows_between(start, end)` - Add ROWS BETWEEN frame
+- `range_between(start, end)` - Add RANGE BETWEEN frame
+- `to_sql()` - Convert to SQL OVER clause
+
+---
+
+## Best Practices
+
+### 1. Use Schema Objects for Type Safety
+
+```python
+# Good: Type-safe with autocomplete
+df = (table.query()
+    .where(crypto_quotes.pair == "BTC-USDT")
+    .to_dataframe())
+
+# Avoid: Raw strings (no type checking)
+df = (table.query()
+    .where("pair = 'BTC-USDT'")
+    .to_dataframe())
+```
+
+### 2. Use Method Chaining
+
+```python
+# Good: Fluent interface
+results = (table.query()
+    .where(crypto_quotes.pair == "BTC-USDT")
+    .where(crypto_quotes.exchange == "BINANCE")
+    .order_by(crypto_quotes.timestamp_ms, desc=True)
+    .limit(100)
+    .to_list())
+
+# Avoid: Multiple variables
+builder = table.query()
+builder = builder.where(crypto_quotes.pair == "BTC-USDT")
+builder = builder.where(crypto_quotes.exchange == "BINANCE")
+results = builder.to_list()
+```
+
+### 3. Use Context Managers
+
+```python
+# Good: Automatic connection management
+with ClickHouseClient(...) as client:
+    table = CryptoQuotesTable(client)
+    results = table.query().to_list()
+
+# Avoid: Manual connection management
+client = ClickHouseClient(...)
+try:
+    table = CryptoQuotesTable(client)
+    results = table.query().to_list()
+finally:
+    client.close()
+```
+
+### 4. Select Only Needed Columns
+
+```python
+# Good: Select specific columns
+df = (table.query()
+    .select(crypto_quotes.pair, crypto_quotes.best_bid_price)
+    .to_dataframe())
+
+# Avoid: Selecting all columns when you only need a few
+df = (table.query()
+    .to_dataframe())  # Selects all columns
+```
+
+### 5. Use Appropriate Output Formats
+
+```python
+# For data analysis: DataFrame
+df = table.query().to_dataframe()
+
+# For numerical computation: NumPy
+arr = table.query().select(...).to_numpy()
+
+# For iteration: List
+results = table.query().to_list()
+
+# For export: CSV/Parquet
+table.query().to_csv("output.csv")
+table.query().to_parquet("output.parquet")
+```
+
+### 6. Use Functions for Transformations
+
+```python
+# Good: Use library functions
+results = (table.query()
+    .select(
+        upper(crypto_quotes.pair).alias("pair_upper"),
+        round(crypto_quotes.best_bid_price, 2).alias("rounded_price")
+    )
+    .to_list())
+
+# Avoid: Raw SQL when functions are available
+results = (table.query()
+    .select("upper(pair) as pair_upper, round(best_bid_price, 2) as rounded_price")
+    .to_list())
+```
+
+### 7. Use Window Functions for Advanced Analytics
+
+```python
+# Good: Window functions for running calculations
+result = (table.query()
+    .select(
+        crypto_quotes.pair,
+        crypto_quotes.best_bid_price,
+        avg(crypto_quotes.best_bid_price).over(
+            WindowSpec().partition_by(crypto_quotes.pair)
+        ).alias("avg_price")
+    )
+    .to_dataframe())
+```
+
+---
+
+## Table Schema
+
+The `crypto_quotes` table has the following columns:
+
+- `pair` (String): Trading pair (e.g., "BTC-USDT")
+- `best_bid_price` (Float64): Best bid price
+- `best_bid_size` (Float64): Best bid size
+- `best_ask_price` (Float64): Best ask price
+- `best_ask_size` (Float64): Best ask size
+- `bid_prices` (Array(Float64)): Array of bid prices
+- `bid_sizes` (Array(Float64)): Array of bid sizes
+- `ask_prices` (Array(Float64)): Array of ask prices
+- `ask_sizes` (Array(Float64)): Array of ask sizes
+- `timestamp_ms` (UInt64): Timestamp in milliseconds
+- `exchange` (LowCardinality(String)): Exchange name
+- `sequence_number` (UInt64): Sequence number
+- `inserted_at` (UInt64): Insert timestamp
+
+---
+
+## License
+
+MIT
+
+---
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+## Support
+
+For issues, questions, or contributions, please open an issue on GitHub.
 ## Basic Examples
 
 ### Example 1: Simple Query with Column Objects
 
 ```python
-from chpy import ClickHouseClient, CryptoQuotesTable, crypto_quotes
+from chpy import ClickHouseClient
+# crypto_quotes schema and CryptoQuotesTable are defined above (see Quick Start section)
 from datetime import datetime, timedelta
 
 client = ClickHouseClient(host="localhost", database="stockhouse")
@@ -817,37 +1265,53 @@ ddl.create_distributed_table(
 
 ```python
 from chpy import (
+    # Type modifiers
     LowCardinality, Nullable, Array, Tuple, Map, Nested,
-    FixedString, Enum, IPv4, IPv6, UUID, Date, DateTime, DateTime64,
+    FixedString, Enum,
+    # Special types
+    IPv4, IPv6, UUID, Date, DateTime, DateTime64,
+    # Primitive types
+    String, Bool, UInt8, UInt16, UInt32, UInt64, UInt128, UInt256,
+    Int8, Int16, Int32, Int64, Int128, Int256,
+    Float32, Float64,
+    Decimal32, Decimal64, Decimal128, Decimal256,
+    # Convenience functions
     LowCardinalityNullable, NullableArray, ArrayNullable
 )
 from chpy.orm import Column, Table
 
+# Primitive types
+Column("name", String)
+Column("age", Int64)
+Column("price", Float64)
+Column("count", UInt64)
+Column("is_active", Bool)
+
 # LowCardinality for string optimization
-Column("exchange", LowCardinality("String"))
-Column("name", LowCardinality(Nullable("String")))  # Nested types
+Column("exchange", LowCardinality(String))
+Column("name", LowCardinality(Nullable(String)))  # Nested types
 
 # Nullable types
-Column("description", Nullable("String"))
-Column("tags", Nullable(Array("String")))
+Column("description", Nullable(String))
+Column("tags", Nullable(Array(String)))
 
 # Array types
-Column("tags", Array("String"))
-Column("prices", Array("Float64"))
-Column("nested_tags", Array(Nullable("String")))
+Column("tags", Array(String))
+Column("prices", Array(Float64))
+Column("nested_tags", Array(Nullable(String)))
 
 # Tuple types
-Column("coordinates", Tuple("Float64", "Float64"))
-Column("metadata", Tuple("String", "Int64", "Float64"))
+Column("coordinates", Tuple(Float64, Float64))
+Column("metadata", Tuple(String, Int64, Float64))
 
 # Map types
-Column("settings", Map("String", "String"))
-Column("counts", Map("String", "Int64"))
+Column("settings", Map(String, String))
+Column("counts", Map(String, Int64))
 
 # Nested types
-Column("user", Nested("name", "String", "age", "Int64"))
+Column("user", Nested("name", String, "age", Int64))
 # Or with tuples:
-Column("user", Nested(("name", "String"), ("age", "Int64")))
+Column("user", Nested(("name", String), ("age", Int64)))
 
 # FixedString
 Column("code", FixedString(10))
@@ -858,24 +1322,28 @@ Column("status", Enum("active", 1, "inactive", 0))
 Column("status", Enum({"active": 1, "inactive": 0}))
 
 # Special types
-Column("ip_address", IPv4())
-Column("ipv6_address", IPv6())
-Column("user_id", UUID())
-Column("created", Date())
+Column("ip_address", IPv4)
+Column("ipv6_address", IPv6)
+Column("user_id", UUID)
+Column("created", Date)
 Column("timestamp", DateTime("UTC"))
 Column("precise_time", DateTime64(3, "UTC"))  # 3 decimal places
 
+# Decimal types
+Column("amount", Decimal64(2))  # Decimal64 with 2 decimal places
+Column("precise_amount", Decimal128(4))  # Decimal128 with 4 decimal places
+
 # Convenience functions
-Column("name", LowCardinalityNullable("String"))  # LowCardinality(Nullable(String))
-Column("tags", NullableArray("String"))  # Nullable(Array(String))
-Column("items", ArrayNullable("String"))  # Array(Nullable(String))
+Column("name", LowCardinalityNullable(String))  # LowCardinality(Nullable(String))
+Column("tags", NullableArray(String))  # Nullable(Array(String))
+Column("items", ArrayNullable(String))  # Array(Nullable(String))
 
 # Use in table definitions
 columns = [
-    Column("id", "UInt64"),
-    Column("name", LowCardinality("String")),
-    Column("tags", Array("String")),
-    Column("metadata", Map("String", "String")),
+    Column("id", UInt64),
+    Column("name", LowCardinality(String)),
+    Column("tags", Array(String)),
+    Column("metadata", Map(String, String)),
     Column("created_at", DateTime("UTC")),
 ]
 table = Table("my_table", "my_db", columns)
@@ -1010,371 +1478,3 @@ client.insert("stockhouse.crypto_quotes", data)
 
 ---
 
-## API Reference
-
-### ClickHouseClient
-
-Base client for ClickHouse operations.
-
-#### Initialization
-
-```python
-client = ClickHouseClient(
-    host="localhost",
-    port=8123,
-    username="default",
-    password="",
-    database="default",
-    **kwargs  # Additional connection parameters
-)
-```
-
-#### Methods
-
-- `execute(query, parameters=None)` - Execute a SELECT query, returns list of dicts
-- `query_df(query, parameters=None)` - Execute query, returns pandas DataFrame
-- `query_np(query, parameters=None)` - Execute query, returns numpy array
-- `query_arrow(query, parameters=None)` - Execute query, returns PyArrow Table
-- `execute_command(query, parameters=None)` - Execute non-SELECT command (INSERT, CREATE, etc.)
-- `insert(table, data)` - Insert data into a table
-- `close()` - Close the connection
-
-#### Context Manager
-
-```python
-with ClickHouseClient(...) as client:
-    # Use client
-    pass  # Connection automatically closed
-```
-
-### TableWrapper
-
-Generic wrapper for any ClickHouse table.
-
-#### Initialization
-
-```python
-table = TableWrapper(
-    client=client,
-    table_name="my_table",
-    database="my_db",
-    schema=optional_table_schema  # Optional Table object for type safety
-)
-```
-
-#### Methods
-
-- `query()` - Start building a query, returns QueryBuilder
-- `insert(data)` - Insert data into the table
-- `c` or `columns` - Access to schema columns (if schema provided)
-
-### CryptoQuotesTable
-
-Specialized wrapper for the `crypto_quotes` table, extends `TableWrapper`.
-
-#### Initialization
-
-```python
-table = CryptoQuotesTable(client, database="stockhouse")
-```
-
-#### Helper Methods
-
-- `get_valid_exchanges()` - Get list of valid exchange names
-- `get_exchange_base_currencies(exchange)` - Get base currencies for exchange
-- `get_exchange_currencies(exchange)` - Get supported currencies for exchange
-- `get_exchange_pairs(exchange)` - Get all valid trading pairs for exchange
-- `is_valid_pair(pair, exchange=None)` - Check if trading pair is valid
-- `get_all_valid_pairs()` - Get all valid trading pairs across all exchanges
-
-### QueryBuilder
-
-Fluent query builder returned by `table.query()`.
-
-#### Filtering Methods
-
-- `where(condition)` - Add WHERE condition (chainable)
-  - Accepts: ColumnExpression, CombinedExpression, SubqueryExpression, or raw SQL string
-- `having(condition)` - Add HAVING clause for GROUP BY queries (chainable)
-
-#### Query Building Methods
-
-- `select(*columns)` - Specify columns to select (chainable)
-  - Accepts: Column objects, Function objects, AggregateFunction objects, Subquery objects, or raw SQL strings
-- `join(table, condition=None, join_type="INNER", alias=None)` - Add JOIN clause (chainable)
-  - `table`: Table object or table name string
-  - `condition`: ColumnExpression, CombinedExpression, or raw SQL string (required except for CROSS JOIN)
-  - `join_type`: "INNER", "LEFT", "RIGHT", "FULL", or "CROSS"
-  - `alias`: Optional table alias
-- `from_subquery(subquery, alias)` - Use subquery as FROM clause (chainable)
-- `order_by(column, desc=True)` - Specify ordering (chainable)
-- `limit(n)` - Limit number of results (chainable)
-- `group_by(*columns)` - Group by columns (chainable)
-
-#### Execution Methods
-
-- `to_list()` - Execute and return as list of Row objects (if schema) or dictionaries
-- `to_dict(key_column, value_column=None)` - Execute and return as dictionary
-- `to_dataframe()` - Execute and return as pandas DataFrame
-- `to_numpy(columns=None, dtype=None)` - Execute and return as numpy array
-- `to_json(indent=None)` - Execute and return as JSON string
-- `to_csv(path=None, **kwargs)` - Execute and return/write CSV
-- `to_parquet(path, **kwargs)` - Execute and write Parquet file
-- `count()` - Count rows matching filters
-- `first()` - Get first result (or None)
-- `exists()` - Check if any rows match (returns bool)
-- `__iter__()` - Make query builder iterable
-
-### ORM Classes
-
-#### Table
-
-Represents a database table with columns.
-
-```python
-table = Table(name="my_table", database="my_db", columns=[...])
-```
-
-#### Column
-
-Represents a database column.
-
-```python
-column = Column(name="pair", type_="String", table=optional_table)
-```
-
-Column objects support:
-- Comparison operators: `==`, `!=`, `<`, `<=`, `>`, `>=`
-- `in_(values)` - IN operator
-- `not_in(values)` - NOT IN operator
-- `like(pattern)` - LIKE operator
-- Can be combined with `&` (AND) and `|` (OR)
-
-#### Row
-
-Represents a row from a query result.
-
-- Attribute access: `row.column_name`
-- Dictionary access: `row['column_name']`
-- `get(key, default)` - Get with default
-- `to_dict()` - Convert to dictionary
-
-### DDL
-
-High-level DDL operations for table and database management.
-
-#### Methods
-
-- `create_table(table, columns=None, database=None, engine="MergeTree", order_by=None, ...)`
-- `drop_table(table, database=None, if_exists=True)`
-- `add_column(table, column, database=None, after=None, if_not_exists=True)`
-- `drop_column(table, column_name, database=None, if_exists=True)`
-- `modify_column(table, column, database=None)`
-- `rename_table(old_table, new_name, database=None)`
-- `create_database(database, if_not_exists=True, engine=None, settings=None)`
-- `drop_database(database, if_exists=True)`
-- `create_materialized_view(view, to_table, select_query, ...)`
-- `drop_materialized_view(view, database=None, if_exists=True)`
-- `create_distributed_table(table, cluster, local_table, ...)`
-
-### Functions
-
-The library provides comprehensive ClickHouse function coverage. Import from `chpy.functions`:
-
-```python
-from chpy.functions import (
-    # Aggregate
-    count, sum, avg, min, max, quantile, stddevPop, stddevSamp,
-    # String
-    length, upper, lower, substring, concat, startsWith, endsWith,
-    # Date/Time
-    toYear, toMonth, toDayOfMonth, toHour, addDays, subtractDays,
-    # Math
-    abs, sqrt, round, floor, ceil,
-    # Type conversion
-    toString, toInt64, toFloat64, toDateTime,
-    # Conditional
-    if_ as if_func, coalesce,
-    # Array
-    array, arraySum, arrayAvg, arrayMax, arrayMin,
-    # And many more...
-)
-```
-
-All functions support:
-- `.alias(name)` - Set column alias
-- `.over(window_spec)` - Add OVER clause for window functions
-
-### WindowSpec
-
-Window specification for OVER clauses.
-
-```python
-from chpy.functions.base import WindowSpec
-
-WindowSpec()
-    .partition_by(column1, column2)
-    .order_by(column3, desc=True)
-    .rows_between("UNBOUNDED PRECEDING", "CURRENT ROW")
-```
-
-#### Methods
-
-- `partition_by(*columns)` - Add PARTITION BY clause
-- `order_by(*columns, desc=False)` - Add ORDER BY clause
-- `rows_between(start, end)` - Add ROWS BETWEEN frame
-- `range_between(start, end)` - Add RANGE BETWEEN frame
-- `to_sql()` - Convert to SQL OVER clause
-
----
-
-## Best Practices
-
-### 1. Use Schema Objects for Type Safety
-
-```python
-# Good: Type-safe with autocomplete
-df = (table.query()
-    .where(crypto_quotes.pair == "BTC-USDT")
-    .to_dataframe())
-
-# Avoid: Raw strings (no type checking)
-df = (table.query()
-    .where("pair = 'BTC-USDT'")
-    .to_dataframe())
-```
-
-### 2. Use Method Chaining
-
-```python
-# Good: Fluent interface
-results = (table.query()
-    .where(crypto_quotes.pair == "BTC-USDT")
-    .where(crypto_quotes.exchange == "BINANCE")
-    .order_by(crypto_quotes.timestamp_ms, desc=True)
-    .limit(100)
-    .to_list())
-
-# Avoid: Multiple variables
-builder = table.query()
-builder = builder.where(crypto_quotes.pair == "BTC-USDT")
-builder = builder.where(crypto_quotes.exchange == "BINANCE")
-results = builder.to_list()
-```
-
-### 3. Use Context Managers
-
-```python
-# Good: Automatic connection management
-with ClickHouseClient(...) as client:
-    table = CryptoQuotesTable(client)
-    results = table.query().to_list()
-
-# Avoid: Manual connection management
-client = ClickHouseClient(...)
-try:
-    table = CryptoQuotesTable(client)
-    results = table.query().to_list()
-finally:
-    client.close()
-```
-
-### 4. Select Only Needed Columns
-
-```python
-# Good: Select specific columns
-df = (table.query()
-    .select(crypto_quotes.pair, crypto_quotes.best_bid_price)
-    .to_dataframe())
-
-# Avoid: Selecting all columns when you only need a few
-df = (table.query()
-    .to_dataframe())  # Selects all columns
-```
-
-### 5. Use Appropriate Output Formats
-
-```python
-# For data analysis: DataFrame
-df = table.query().to_dataframe()
-
-# For numerical computation: NumPy
-arr = table.query().select(...).to_numpy()
-
-# For iteration: List
-results = table.query().to_list()
-
-# For export: CSV/Parquet
-table.query().to_csv("output.csv")
-table.query().to_parquet("output.parquet")
-```
-
-### 6. Use Functions for Transformations
-
-```python
-# Good: Use library functions
-results = (table.query()
-    .select(
-        upper(crypto_quotes.pair).alias("pair_upper"),
-        round(crypto_quotes.best_bid_price, 2).alias("rounded_price")
-    )
-    .to_list())
-
-# Avoid: Raw SQL when functions are available
-results = (table.query()
-    .select("upper(pair) as pair_upper, round(best_bid_price, 2) as rounded_price")
-    .to_list())
-```
-
-### 7. Use Window Functions for Advanced Analytics
-
-```python
-# Good: Window functions for running calculations
-result = (table.query()
-    .select(
-        crypto_quotes.pair,
-        crypto_quotes.best_bid_price,
-        avg(crypto_quotes.best_bid_price).over(
-            WindowSpec().partition_by(crypto_quotes.pair)
-        ).alias("avg_price")
-    )
-    .to_dataframe())
-```
-
----
-
-## Table Schema
-
-The `crypto_quotes` table has the following columns:
-
-- `pair` (String): Trading pair (e.g., "BTC-USDT")
-- `best_bid_price` (Float64): Best bid price
-- `best_bid_size` (Float64): Best bid size
-- `best_ask_price` (Float64): Best ask price
-- `best_ask_size` (Float64): Best ask size
-- `bid_prices` (Array(Float64)): Array of bid prices
-- `bid_sizes` (Array(Float64)): Array of bid sizes
-- `ask_prices` (Array(Float64)): Array of ask prices
-- `ask_sizes` (Array(Float64)): Array of ask sizes
-- `timestamp_ms` (UInt64): Timestamp in milliseconds
-- `exchange` (LowCardinality(String)): Exchange name
-- `sequence_number` (UInt64): Sequence number
-- `inserted_at` (UInt64): Insert timestamp
-
----
-
-## License
-
-MIT
-
----
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
-
-## Support
-
-For issues, questions, or contributions, please open an issue on GitHub.

@@ -10,6 +10,7 @@ This project is developed mainly using [Cursor](https://cursor.sh), an AI-powere
 
 - 🚀 **Fluent Query Builder** - Method chaining for building complex queries
 - 🔒 **Type-Safe Columns** - ORM-style column objects with autocomplete support
+- ➕ **Arithmetic Operators** - Use native Python operators (`+`, `-`, `*`, `/`, `%`, `-`) for arithmetic operations
 - 📊 **Multiple Output Formats** - DataFrame, NumPy, JSON, CSV, Parquet, and more
 - 🛠️ **DDL Operations** - High-level table and database management
 - 🎯 **Comprehensive Functions** - Full coverage of ClickHouse functions
@@ -273,11 +274,30 @@ column = Column(name="pair", type_="String", table=optional_table)
 ```
 
 Column objects support:
-- Comparison operators: `==`, `!=`, `<`, `<=`, `>`, `>=`
+- **Comparison operators**: `==`, `!=`, `<`, `<=`, `>`, `>=`
+- **Arithmetic operators**: `+`, `-`, `*`, `/`, `%` (modulo), and unary `-` (negation)
 - `in_(values)` - IN operator
 - `not_in(values)` - NOT IN operator
 - `like(pattern)` - LIKE operator
 - Can be combined with `&` (AND) and `|` (OR)
+
+**Arithmetic Operators Example:**
+```python
+# Use native Python operators for arithmetic operations
+results = (table.query()
+    .select(
+        table.price,
+        (table.price + 10).alias("price_plus_10"),
+        (table.price * table.quantity).alias("total"),
+        (table.price / 2).alias("half_price"),
+        (table.price % 100).alias("remainder"),
+        (-table.price).alias("negated_price"),
+        # Works with aggregate functions too
+        (avg(table.price) - avg(table.cost)).alias("avg_profit")
+    )
+    .where((table.price * table.quantity) > 1000)
+    .to_list())
+```
 
 #### Row
 
@@ -566,7 +586,46 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 4: IN and NOT IN Operators
+### Example 4: Arithmetic Operators
+
+```python
+# Use native Python operators for arithmetic operations
+results = (table.query()
+    .select(
+        table.best_bid_price,
+        table.best_ask_price,
+        # Addition
+        (table.best_bid_price + 10).alias("bid_plus_10"),
+        # Subtraction
+        (table.best_ask_price - table.best_bid_price).alias("spread"),
+        # Multiplication
+        (table.best_bid_price * 1.1).alias("price_with_margin"),
+        # Division
+        (table.best_ask_price / table.best_bid_price).alias("ask_bid_ratio"),
+        # Modulo
+        (table.best_bid_price % 1000).alias("remainder"),
+        # Negation
+        (-table.best_bid_price).alias("negated_price"),
+        # Complex expressions
+        ((table.best_ask_price - table.best_bid_price) / table.best_bid_price * 100).alias("spread_percentage")
+    )
+    .where((table.best_bid_price * table.best_bid_size) > 1000)
+    .limit(5)
+    .to_list())
+
+# Works with aggregate functions too
+results = (table.query()
+    .select(
+        table.pair,
+        avg(table.best_bid_price).alias("avg_bid"),
+        avg(table.best_ask_price).alias("avg_ask"),
+        (avg(table.best_ask_price) - avg(table.best_bid_price)).alias("avg_spread")
+    )
+    .group_by(table.pair)
+    .to_list())
+```
+
+### Example 5: IN and NOT IN Operators
 
 ```python
 # IN operator for multiple values
@@ -582,7 +641,7 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 5: LIKE Operator
+### Example 6: LIKE Operator
 
 ```python
 # Pattern matching with LIKE
@@ -592,7 +651,7 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 6: Complex Expressions with AND/OR
+### Example 7: Complex Expressions with AND/OR
 
 ```python
 # Combine conditions with & (AND) and | (OR)
@@ -616,7 +675,7 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 7: Multiple WHERE Clauses
+### Example 8: Multiple WHERE Clauses
 
 ```python
 # Multiple where() calls are combined with AND
@@ -629,7 +688,7 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 8: Selecting Specific Columns
+### Example 9: Selecting Specific Columns
 
 ```python
 # Select only the columns you need
@@ -648,7 +707,7 @@ df = (table.query()
 print(df.columns)  # Only selected columns
 ```
 
-### Example 9: Ordering Results
+### Example 10: Ordering Results
 
 ```python
 # Order by one or more columns
@@ -660,7 +719,7 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 10: Counting Rows
+### Example 11: Counting Rows
 
 ```python
 # Count rows matching conditions
@@ -673,7 +732,7 @@ count = (table.query()
 print(f"Found {count} rows")
 ```
 
-### Example 11: Getting First Result
+### Example 12: Getting First Result
 
 ```python
 # Get the first matching row
@@ -686,7 +745,7 @@ if first:
     print(f"Latest quote: {first.pair} @ {first.best_bid_price}")
 ```
 
-### Example 12: Checking Existence
+### Example 13: Checking Existence
 
 ```python
 # Check if any rows match
@@ -698,7 +757,7 @@ exists = (table.query()
 print(f"Data exists: {exists}")
 ```
 
-### Example 13: Iterating Over Results
+### Example 14: Iterating Over Results
 
 ```python
 # Iterate over results (lazy evaluation)
@@ -706,7 +765,7 @@ for row in table.query().where(table.pair == "BTC-USDT").limit(10):
     print(f"Pair: {row.pair}, Bid: {row.best_bid_price}")
 ```
 
-### Example 14: Output Formats
+### Example 15: Output Formats
 
 ```python
 # List of dictionaries
@@ -741,7 +800,7 @@ pair_dict = (table.query()
 
 ## Intermediate Examples
 
-### Example 15: Grouping and Aggregation
+### Example 16: Grouping and Aggregation
 
 ```python
 from chpy.functions import avg, count, min, max, sum
@@ -768,7 +827,7 @@ for row in results:
           f"avg={row['avg_bid']:.2f}, count={row['cnt']}")
 ```
 
-### Example 16: String Functions
+### Example 17: String Functions
 
 ```python
 from chpy.functions import length, upper, lower, substring, concat, startsWith, endsWith
@@ -788,26 +847,26 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 17: Date and Time Functions
+### Example 18: Date and Time Functions
 
 ```python
-from chpy.functions import toYear, toMonth, toDayOfMonth, toHour, toDateTime, divide
+from chpy.functions import toYear, toMonth, toDayOfMonth, toHour, toDateTime
 
 # Extract date/time components
 results = (table.query()
     .select(
         table.timestamp_ms,
-        toYear(toDateTime(divide(table.timestamp_ms, 1000))).alias("year"),
-        toMonth(toDateTime(divide(table.timestamp_ms, 1000))).alias("month"),
-        toDayOfMonth(toDateTime(divide(table.timestamp_ms, 1000))).alias("day"),
-        toHour(toDateTime(divide(table.timestamp_ms, 1000))).alias("hour")
+        toYear(toDateTime(table.timestamp_ms / 1000)).alias("year"),
+        toMonth(toDateTime(table.timestamp_ms / 1000)).alias("month"),
+        toDayOfMonth(toDateTime(table.timestamp_ms / 1000)).alias("day"),
+        toHour(toDateTime(table.timestamp_ms / 1000)).alias("hour")
     )
     .where(table.pair == "BTC-USDT")
     .limit(5)
     .to_list())
 ```
 
-### Example 18: Mathematical Functions
+### Example 19: Mathematical Functions
 
 ```python
 from chpy.functions import abs, sqrt, round, floor, ceil
@@ -829,7 +888,7 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 19: Conditional Functions
+### Example 20: Conditional Functions
 
 ```python
 from chpy.functions import if_ as if_func, coalesce
@@ -852,7 +911,7 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 20: Type Conversion Functions
+### Example 21: Type Conversion Functions
 
 ```python
 from chpy.functions import toString, toInt64, toFloat64
@@ -870,7 +929,7 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 21: Combining Multiple Functions
+### Example 22: Combining Multiple Functions
 
 ```python
 # Combine different function types in one query
@@ -879,7 +938,7 @@ results = (table.query()
         upper(table.pair).alias("pair_upper"),
         length(table.pair).alias("pair_length"),
         round(table.best_bid_price, 2).alias("rounded_price"),
-        toYear(toDateTime(divide(table.timestamp_ms, 1000))).alias("year"),
+        toYear(toDateTime(table.timestamp_ms / 1000)).alias("year"),
         if_func(
             table.best_bid_price > 50000,
             "premium",
@@ -891,7 +950,7 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 22: Raw SQL Conditions
+### Example 23: Raw SQL Conditions
 
 ```python
 # Use raw SQL for complex conditions
@@ -903,7 +962,7 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 23: Working with Generic Tables
+### Example 24: Working with Generic Tables
 
 ```python
 from chpy import ClickHouseClient
@@ -944,7 +1003,7 @@ table.insert([
 
 ## Advanced Examples
 
-### Example 24: JOIN Operations
+### Example 25: JOIN Operations
 
 ```python
 from chpy.orm import Table, Column
@@ -1004,7 +1063,7 @@ result = (table.query()
     .to_list())
 ```
 
-### Example 25: Window Functions
+### Example 26: Window Functions
 
 ```python
 from chpy.functions.base import WindowSpec
@@ -1082,7 +1141,7 @@ result = (table.query()
     .to_dataframe())
 ```
 
-### Example 26: Subqueries
+### Example 27: Subqueries
 
 ```python
 from chpy.orm import Subquery
@@ -1134,7 +1193,7 @@ result = (table.query()
     .to_list())
 ```
 
-### Example 27: DDL Operations - Creating Tables
+### Example 28: DDL Operations - Creating Tables
 
 ```python
 from chpy import ClickHouseClient, DDL
@@ -1183,7 +1242,7 @@ ddl.create_table(
 )
 ```
 
-### Example 28: DDL Operations - Altering Tables
+### Example 29: DDL Operations - Altering Tables
 
 ```python
 # Add column
@@ -1206,7 +1265,7 @@ ddl.modify_column(
 ddl.rename_table("my_db.old_table", "new_table")
 ```
 
-### Example 29: DDL Operations - Databases and Views
+### Example 30: DDL Operations - Databases and Views
 
 ```python
 # Create database
@@ -1245,7 +1304,7 @@ ddl.create_distributed_table(
 )
 ```
 
-### Example 30: ClickHouse Type System
+### Example 31: ClickHouse Type System
 
 ```python
 from chpy import (
@@ -1333,7 +1392,7 @@ columns = [
 table = Table("my_table", "my_db", columns)
 ```
 
-### Example 31: Row Objects with Schema
+### Example 32: Row Objects with Schema
 
 ```python
 # When using a schema, results are returned as Row objects
@@ -1357,7 +1416,7 @@ for row in results:
     row_dict = row.to_dict()
 ```
 
-### Example 32: Complex Aggregations
+### Example 33: Complex Aggregations
 
 ```python
 from chpy.functions import (
@@ -1382,7 +1441,7 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 33: Array Functions
+### Example 34: Array Functions
 
 ```python
 from chpy.functions import (
@@ -1407,7 +1466,7 @@ results = (table.query()
     .to_list())
 ```
 
-### Example 34: Time Series Analysis
+### Example 35: Time Series Analysis
 
 ```python
 from chpy.functions import (
@@ -1418,7 +1477,7 @@ from chpy.functions import (
 # Time-based aggregations
 results = (table.query()
     .select(
-        toStartOfHour(toDateTime(divide(table.timestamp_ms, 1000))).alias("hour"),
+        toStartOfHour(toDateTime(table.timestamp_ms / 1000)).alias("hour"),
         table.pair,
         avg(table.best_bid_price).alias("avg_price"),
         min(table.best_bid_price).alias("min_price"),
@@ -1428,14 +1487,14 @@ results = (table.query()
     .where(table.pair == "BTC-USDT")
     .where(table.timestamp_ms >= datetime.now() - timedelta(days=7))
     .group_by(
-        toStartOfHour(toDateTime(divide(table.timestamp_ms, 1000))),
+        toStartOfHour(toDateTime(table.timestamp_ms / 1000)),
         table.pair
     )
     .order_by("hour", desc=True)
     .to_dataframe())
 ```
 
-### Example 35: Inserting Data
+### Example 36: Inserting Data
 
 ```python
 # Insert data into table

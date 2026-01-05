@@ -49,7 +49,7 @@ class TestSubquery:
     
     def test_subquery_to_sql(self, subquery_builder):
         """Test Subquery to_sql conversion."""
-        subquery_builder.select("pair").where(Column("pair", String()) == "BTC-USDT")
+        subquery_builder.select("pair").where(Column("pair", String) == "BTC-USDT")
         subq = Subquery(subquery_builder)
         
         sql = subq.to_sql()
@@ -122,8 +122,8 @@ class TestSubqueryInWhere:
     
     def test_where_with_subquery_in(self, builder, subquery_builder):
         """Test WHERE clause with subquery in IN operator."""
-        col = Column("pair", String())
-        subquery_builder.select("pair").where(Column("exchange", String()) == "BINANCE")
+        col = Column("pair", String)
+        subquery_builder.select("pair").where(Column("exchange", String) == "BINANCE")
         subq = Subquery(subquery_builder)
         
         builder.where(col.in_(subq))
@@ -136,7 +136,7 @@ class TestSubqueryInWhere:
     
     def test_where_with_subquery_not_in(self, builder, subquery_builder):
         """Test WHERE clause with subquery in NOT IN operator."""
-        col = Column("pair", String())
+        col = Column("pair", String)
         subquery_builder.select("pair")
         subq = Subquery(subquery_builder)
         
@@ -149,7 +149,7 @@ class TestSubqueryInWhere:
     
     def test_where_with_subquery_comparison(self, builder, subquery_builder):
         """Test WHERE clause with subquery in comparison operator."""
-        col = Column("price", Float64())
+        col = Column("price", Float64)
         subquery_builder.select("max_price").limit(1)
         subq = Subquery(subquery_builder)
         
@@ -162,7 +162,7 @@ class TestSubqueryInWhere:
     
     def test_where_with_subquery_equals(self, builder, subquery_builder):
         """Test WHERE clause with subquery in equality operator."""
-        col = Column("pair", String())
+        col = Column("pair", String)
         subquery_builder.select("pair").limit(1)
         subq = Subquery(subquery_builder)
         
@@ -175,7 +175,7 @@ class TestSubqueryInWhere:
     
     def test_where_with_exists(self, builder, subquery_builder):
         """Test WHERE clause with EXISTS subquery."""
-        subquery_builder.where(Column("pair", String()) == "BTC-USDT")
+        subquery_builder.where(Column("pair", String) == "BTC-USDT")
         exists_expr = Subquery.exists(subquery_builder)
         
         builder.where(exists_expr)
@@ -188,7 +188,7 @@ class TestSubqueryInWhere:
     
     def test_where_with_not_exists(self, builder, subquery_builder):
         """Test WHERE clause with NOT EXISTS subquery."""
-        subquery_builder.where(Column("pair", String()) == "ETH-USDT")
+        subquery_builder.where(Column("pair", String) == "ETH-USDT")
         not_exists_expr = Subquery.not_exists(subquery_builder)
         
         builder.where(not_exists_expr)
@@ -201,8 +201,8 @@ class TestSubqueryInWhere:
     
     def test_where_with_exists_and_other_conditions(self, builder, subquery_builder):
         """Test WHERE clause combining EXISTS with other conditions."""
-        col = Column("exchange", String())
-        subquery_builder.where(Column("pair", String()) == "BTC-USDT")
+        col = Column("exchange", String)
+        subquery_builder.where(Column("pair", String) == "BTC-USDT")
         exists_expr = Subquery.exists(subquery_builder)
         
         builder.where((col == "BINANCE") & exists_expr)
@@ -243,8 +243,8 @@ class TestSubqueryInHaving:
     
     def test_having_with_expression(self, builder):
         """Test HAVING clause with ColumnExpression (backward compatibility)."""
-        col = Column("price", Float64())
-        col2 = Column("min_price", Float64())
+        col = Column("price", Float64)
+        col2 = Column("min_price", Float64)
         
         builder.having(col > col2)
         query = builder._build_query()
@@ -316,7 +316,7 @@ class TestSubqueryInSelect:
         subquery_builder.select("max(price)").limit(1)
         subq = Subquery(subquery_builder)
         
-        builder.select(Column("pair", String()), subq)
+        builder.select(Column("pair", String), subq)
         query = builder._build_query()
         
         assert "SELECT" in query
@@ -337,8 +337,8 @@ class TestSubqueryInSelect:
     
     def test_select_with_subquery_and_columns(self, builder, subquery_builder):
         """Test SELECT clause with subquery and other columns."""
-        col1 = Column("pair", String())
-        col2 = Column("exchange", String())
+        col1 = Column("pair", String)
+        col2 = Column("exchange", String)
         subquery_builder.select("count()")
         subq = Subquery(subquery_builder).alias("total_count")
         
@@ -381,7 +381,7 @@ class TestSubqueryInFrom:
     
     def test_from_subquery(self, builder, subquery_builder):
         """Test FROM clause with subquery (derived table)."""
-        subquery_builder.select("pair", "price").where(Column("exchange", String()) == "BINANCE")
+        subquery_builder.select("pair", "price").where(Column("exchange", String) == "BINANCE")
         subq = Subquery(subquery_builder)
         
         builder.from_subquery(subq, alias="derived_table")
@@ -397,7 +397,7 @@ class TestSubqueryInFrom:
         subquery_builder.select("pair", "price")
         subq = Subquery(subquery_builder)
         
-        builder.from_subquery(subq, alias="dt").select(Column("pair", String()))
+        builder.from_subquery(subq, alias="dt").select(Column("pair", String))
         query = builder._build_query()
         
         assert "SELECT pair" in query
@@ -414,9 +414,9 @@ class TestSubqueryInFrom:
     def test_from_subquery_complex(self, builder, subquery_builder):
         """Test complex FROM subquery with multiple clauses."""
         subquery_builder.select("pair", "price")
-        subquery_builder.where(Column("exchange", String()) == "BINANCE")
-        subquery_builder.group_by(Column("pair", String()))
-        subquery_builder.order_by(Column("pair", String()))
+        subquery_builder.where(Column("exchange", String) == "BINANCE")
+        subquery_builder.group_by(Column("pair", String))
+        subquery_builder.order_by(Column("pair", String))
         subquery_builder.limit(100)
         subq = Subquery(subquery_builder)
         
@@ -484,7 +484,7 @@ class TestSubqueryExpression:
     def test_subquery_expression_combine_with_and(self, subquery_builder):
         """Test combining SubqueryExpression with AND."""
         from chpy.orm import CombinedExpression
-        col = Column("pair", String())
+        col = Column("pair", String)
         
         exists_expr = Subquery.exists(subquery_builder)
         col_expr = col == "BTC-USDT"
@@ -496,7 +496,7 @@ class TestSubqueryExpression:
     def test_subquery_expression_combine_with_or(self, subquery_builder):
         """Test combining SubqueryExpression with OR."""
         from chpy.orm import CombinedExpression
-        col = Column("pair", String())
+        col = Column("pair", String)
         
         exists_expr = Subquery.exists(subquery_builder)
         col_expr = col == "BTC-USDT"
@@ -545,7 +545,7 @@ class TestSubqueryComplexScenarios:
         outer_subq = Subquery(subquery_builder2)
         
         # Inner subquery that uses outer subquery
-        col = Column("price", Float64())
+        col = Column("price", Float64)
         subquery_builder1.where(col > outer_subq)
         
         # Main query uses inner subquery
@@ -559,8 +559,8 @@ class TestSubqueryComplexScenarios:
     
     def test_multiple_subqueries_in_where(self, builder, subquery_builder1, subquery_builder2):
         """Test multiple subqueries in WHERE clause."""
-        col1 = Column("pair", String())
-        col2 = Column("price", Float64())
+        col1 = Column("pair", String)
+        col2 = Column("price", Float64)
         
         subquery_builder1.select("pair")
         subq1 = Subquery(subquery_builder1)
@@ -579,7 +579,7 @@ class TestSubqueryComplexScenarios:
     
     def test_subquery_in_select_and_where(self, builder, subquery_builder1, subquery_builder2):
         """Test subquery in both SELECT and WHERE clauses."""
-        col = Column("pair", String())
+        col = Column("pair", String)
         
         # Subquery for WHERE
         subquery_builder1.select("pair")

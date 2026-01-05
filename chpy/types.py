@@ -16,6 +16,10 @@ class TypeBuilder:
     def __repr__(self) -> str:
         """Return representation."""
         return f"{self.__class__.__name__}({str(self)})"
+    
+    def __call__(self):
+        """Allow instances to be callable, returning self for convenience."""
+        return self
 
 
 class LowCardinality(TypeBuilder):
@@ -545,4 +549,51 @@ def NullableArray(inner_type: Union[str, TypeBuilder]) -> Nullable:
 def ArrayNullable(inner_type: Union[str, TypeBuilder]) -> Array:
     """Create Array(Nullable(type))."""
     return Array(Nullable(inner_type))
+
+
+# Module-level instances for parameterless primitive types
+# These allow using types without parentheses: Column("name", String) instead of Column("name", String)
+# We save class references first, then create instances to avoid NameError
+_String = String
+_Bool = Bool
+_UInt8 = UInt8
+_UInt16 = UInt16
+_UInt32 = UInt32
+_UInt64 = UInt64
+_UInt128 = UInt128
+_UInt256 = UInt256
+_Int8 = Int8
+_Int16 = Int16
+_Int32 = Int32
+_Int64 = Int64
+_Int128 = Int128
+_Int256 = Int256
+_Float32 = Float32
+_Float64 = Float64
+_IPv4 = IPv4
+_IPv6 = IPv6
+_UUID = UUID
+_Date = Date
+
+# Create module-level instances (these overwrite the class names)
+String = _String()
+Bool = _Bool()
+UInt8 = _UInt8()
+UInt16 = _UInt16()
+UInt32 = _UInt32()
+UInt64 = _UInt64()
+UInt128 = _UInt128()
+UInt256 = _UInt256()
+Int8 = _Int8()
+Int16 = _Int16()
+Int32 = _Int32()
+Int64 = _Int64()
+Int128 = _Int128()
+Int256 = _Int256()
+Float32 = _Float32()
+Float64 = _Float64()
+IPv4 = _IPv4()
+IPv6 = _IPv6()
+UUID = _UUID()
+Date = _Date()
 

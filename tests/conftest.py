@@ -38,16 +38,16 @@ def mock_query_result():
 @pytest.fixture
 def sample_column():
     """Sample Column object for testing."""
-    return Column("test_column", String())
+    return Column("test_column", String)
 
 
 @pytest.fixture
 def sample_table():
     """Sample Table object for testing."""
     columns = [
-        Column("id", UInt64()),
-        Column("name", String()),
-        Column("value", Float64()),
+        Column("id", UInt64),
+        Column("name", String),
+        Column("value", Float64),
     ]
     return Table("test_table", "test_db", columns)
 

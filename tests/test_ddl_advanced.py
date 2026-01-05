@@ -28,8 +28,8 @@ class TestMaterializedViews:
     def test_create_materialized_view_from_strings(self, ddl, mock_client):
         """Test creating materialized view with string names."""
         columns = [
-            Column("pair", String()),
-            Column("avg_price", Float64()),
+            Column("pair", String),
+            Column("avg_price", Float64),
         ]
         target_table = Table("mv_target", "my_db", columns)
         
@@ -50,7 +50,7 @@ class TestMaterializedViews:
     
     def test_create_materialized_view_with_populate(self, ddl, mock_client):
         """Test creating materialized view with POPULATE."""
-        columns = [Column("id", UInt64()), Column("value", Float64())]
+        columns = [Column("id", UInt64), Column("value", Float64)]
         target_table = Table("mv_target", "my_db", columns)
         
         ddl.create_materialized_view(
@@ -67,7 +67,7 @@ class TestMaterializedViews:
     
     def test_create_materialized_view_with_settings(self, ddl, mock_client):
         """Test creating materialized view with settings."""
-        columns = [Column("id", UInt64())]
+        columns = [Column("id", UInt64)]
         target_table = Table("mv_target", "my_db", columns)
         
         ddl.create_materialized_view(
@@ -97,7 +97,7 @@ class TestMaterializedViews:
     
     def test_create_materialized_view_errors(self, ddl):
         """Test error cases for create_materialized_view."""
-        columns = [Column("id", UInt64())]
+        columns = [Column("id", UInt64)]
         target_table = Table("mv_target", "my_db", columns)
         
         # Missing database
@@ -128,8 +128,8 @@ class TestDistributedTables:
     def test_create_distributed_table_from_table_object(self, ddl, mock_client):
         """Test creating distributed table from Table object."""
         columns = [
-            Column("id", UInt64()),
-            Column("name", String()),
+            Column("id", UInt64),
+            Column("name", String),
         ]
         schema = Table("dist_table", "my_db", columns)
         
@@ -146,7 +146,7 @@ class TestDistributedTables:
     
     def test_create_distributed_table_with_sharding_key(self, ddl, mock_client):
         """Test creating distributed table with sharding key."""
-        columns = [Column("id", UInt64()), Column("name", String())]
+        columns = [Column("id", UInt64), Column("name", String)]
         schema = Table("dist_table", "my_db", columns)
         
         ddl.create_distributed_table(
@@ -161,7 +161,7 @@ class TestDistributedTables:
     
     def test_create_distributed_table_from_strings(self, ddl, mock_client):
         """Test creating distributed table with string names."""
-        columns = [Column("id", UInt64()), Column("name", String())]
+        columns = [Column("id", UInt64), Column("name", String)]
         
         ddl.create_distributed_table(
             "dist_table",
@@ -178,7 +178,7 @@ class TestDistributedTables:
     
     def test_create_distributed_table_without_if_not_exists(self, ddl, mock_client):
         """Test creating distributed table without IF NOT EXISTS."""
-        columns = [Column("id", UInt64())]
+        columns = [Column("id", UInt64)]
         schema = Table("dist_table", "my_db", columns)
         
         ddl.create_distributed_table(
@@ -204,7 +204,7 @@ class TestDistributedTables:
             )
         
         # Missing database
-        columns = [Column("id", UInt64())]
+        columns = [Column("id", UInt64)]
         with pytest.raises(ValueError, match="database parameter is required"):
             ddl.create_distributed_table(
                 "dist_table",

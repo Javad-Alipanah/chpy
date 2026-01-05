@@ -28,9 +28,9 @@ class TestDDL:
     def test_create_table_from_table_object(self, ddl, mock_client):
         """Test creating table from Table object."""
         columns = [
-            Column("id", UInt64()),
-            Column("name", String()),
-            Column("value", Float64()),
+            Column("id", UInt64),
+            Column("name", String),
+            Column("value", Float64),
         ]
         schema = Table("my_table", "my_db", columns)
         
@@ -48,8 +48,8 @@ class TestDDL:
     def test_create_table_from_string(self, ddl, mock_client):
         """Test creating table from string table name."""
         columns = [
-            Column("id", UInt64()),
-            Column("name", String()),
+            Column("id", UInt64),
+            Column("name", String),
         ]
         
         ddl.create_table("my_table", columns=columns, database="my_db", order_by="id")
@@ -61,7 +61,7 @@ class TestDDL:
     
     def test_create_table_with_partition_by(self, ddl, mock_client):
         """Test creating table with PARTITION BY."""
-        columns = [Column("id", UInt64()), Column("date", "Date")]
+        columns = [Column("id", UInt64), Column("date", "Date")]
         schema = Table("my_table", "my_db", columns)
         
         ddl.create_table(schema, order_by="id", partition_by="date")
@@ -71,7 +71,7 @@ class TestDDL:
     
     def test_create_table_with_primary_key(self, ddl, mock_client):
         """Test creating table with PRIMARY KEY."""
-        columns = [Column("id", UInt64()), Column("name", String())]
+        columns = [Column("id", UInt64), Column("name", String)]
         schema = Table("my_table", "my_db", columns)
         
         ddl.create_table(schema, order_by="id", primary_key="id")
@@ -81,7 +81,7 @@ class TestDDL:
     
     def test_create_table_with_settings(self, ddl, mock_client):
         """Test creating table with settings."""
-        columns = [Column("id", UInt64())]
+        columns = [Column("id", UInt64)]
         schema = Table("my_table", "my_db", columns)
         
         ddl.create_table(schema, order_by="id", settings={"index_granularity": 8192})
@@ -92,7 +92,7 @@ class TestDDL:
     
     def test_create_table_without_if_not_exists(self, ddl, mock_client):
         """Test creating table without IF NOT EXISTS."""
-        columns = [Column("id", UInt64())]
+        columns = [Column("id", UInt64)]
         schema = Table("my_table", "my_db", columns)
         
         ddl.create_table(schema, order_by="id", if_not_exists=False)
@@ -103,7 +103,7 @@ class TestDDL:
     
     def test_create_table_custom_engine(self, ddl, mock_client):
         """Test creating table with custom engine."""
-        columns = [Column("id", UInt64())]
+        columns = [Column("id", UInt64)]
         schema = Table("my_table", "my_db", columns)
         
         ddl.create_table(schema, engine="Memory", order_by="id")
@@ -139,7 +139,7 @@ class TestDDL:
     
     def test_add_column(self, ddl, mock_client):
         """Test adding a column."""
-        new_col = Column("new_col", String())
+        new_col = Column("new_col", String)
         ddl.add_column("my_db.my_table", new_col)
         
         mock_client.execute_command.assert_called_once_with(
@@ -148,7 +148,7 @@ class TestDDL:
     
     def test_add_column_after(self, ddl, mock_client):
         """Test adding a column after another column."""
-        new_col = Column("new_col", String())
+        new_col = Column("new_col", String)
         ddl.add_column("my_db.my_table", new_col, after="id")
         
         call_args = mock_client.execute_command.call_args[0][0]
@@ -156,7 +156,7 @@ class TestDDL:
     
     def test_add_column_without_if_not_exists(self, ddl, mock_client):
         """Test adding column without IF NOT EXISTS."""
-        new_col = Column("new_col", String())
+        new_col = Column("new_col", String)
         ddl.add_column("my_db.my_table", new_col, if_not_exists=False)
         
         call_args = mock_client.execute_command.call_args[0][0]
@@ -245,7 +245,7 @@ class TestDDL:
     
     def test_create_table_multiple_order_by(self, ddl, mock_client):
         """Test creating table with multiple ORDER BY columns."""
-        columns = [Column("id", UInt64()), Column("timestamp", UInt64())]
+        columns = [Column("id", UInt64), Column("timestamp", UInt64)]
         schema = Table("my_table", "my_db", columns)
         
         ddl.create_table(schema, order_by=["id", "timestamp"])
@@ -255,7 +255,7 @@ class TestDDL:
     
     def test_create_table_multiple_partition_by(self, ddl, mock_client):
         """Test creating table with multiple PARTITION BY columns."""
-        columns = [Column("date", "Date"), Column("region", String())]
+        columns = [Column("date", "Date"), Column("region", String)]
         schema = Table("my_table", "my_db", columns)
         
         ddl.create_table(schema, order_by="date", partition_by=["date", "region"])
@@ -271,7 +271,7 @@ class TestDDL:
         
         # Missing database when table is string
         with pytest.raises(ValueError, match="database parameter is required"):
-            ddl.create_table("my_table", columns=[Column("id", UInt64())], order_by="id")
+            ddl.create_table("my_table", columns=[Column("id", UInt64)], order_by="id")
         
         # Invalid table type
         with pytest.raises(TypeError):
@@ -291,9 +291,9 @@ class TestDDL:
         """Test error cases for add_column."""
         # Missing database
         with pytest.raises(ValueError, match="database parameter is required"):
-            ddl.add_column("my_table", Column("col", String()))
+            ddl.add_column("my_table", Column("col", String))
         
         # Invalid table type
         with pytest.raises(TypeError):
-            ddl.add_column(123, Column("col", String()))
+            ddl.add_column(123, Column("col", String))
 

@@ -33,9 +33,9 @@ class TableWrapper:
         >>> 
         >>> # Create schema (optional, for type safety)
         >>> columns = [
-        ...     Column("id", UInt64()),
-        ...     Column("name", String()),
-        ...     Column("value", Float64()),
+        ...     Column("id", UInt64),
+        ...     Column("name", String),
+        ...     Column("value", Float64),
         ... ]
         >>> schema = Table("my_table", "my_db", columns)
         >>> 

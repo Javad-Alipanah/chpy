@@ -21,8 +21,8 @@ class TestWindowSpec:
     
     def test_partition_by(self):
         """Test PARTITION BY clause."""
-        col1 = Column("pair", String())
-        col2 = Column("exchange", String())
+        col1 = Column("pair", String)
+        col2 = Column("exchange", String)
         spec = WindowSpec().partition_by(col1, col2)
         sql = spec.to_sql()
         assert "PARTITION BY pair, exchange" in sql
@@ -30,7 +30,7 @@ class TestWindowSpec:
     
     def test_order_by(self):
         """Test ORDER BY clause."""
-        col = Column("timestamp_ms", UInt64())
+        col = Column("timestamp_ms", UInt64)
         spec = WindowSpec().order_by(col)
         sql = spec.to_sql()
         assert "ORDER BY timestamp_ms ASC" in sql
@@ -38,15 +38,15 @@ class TestWindowSpec:
     
     def test_order_by_desc(self):
         """Test ORDER BY DESC clause."""
-        col = Column("timestamp_ms", UInt64())
+        col = Column("timestamp_ms", UInt64)
         spec = WindowSpec().order_by(col, desc=True)
         sql = spec.to_sql()
         assert "ORDER BY timestamp_ms DESC" in sql
     
     def test_order_by_multiple(self):
         """Test ORDER BY with multiple columns."""
-        col1 = Column("pair", String())
-        col2 = Column("timestamp_ms", UInt64())
+        col1 = Column("pair", String)
+        col2 = Column("timestamp_ms", UInt64)
         spec = WindowSpec().order_by(col1, col2, desc=[False, True])
         sql = spec.to_sql()
         assert "ORDER BY pair ASC, timestamp_ms DESC" in sql
@@ -71,8 +71,8 @@ class TestWindowSpec:
     
     def test_complex_window_spec(self):
         """Test complex window specification with all clauses."""
-        col1 = Column("pair", String())
-        col2 = Column("timestamp_ms", UInt64())
+        col1 = Column("pair", String)
+        col2 = Column("timestamp_ms", UInt64)
         spec = (WindowSpec()
             .partition_by(col1)
             .order_by(col2, desc=True)
@@ -88,15 +88,15 @@ class TestFunctionWithOver:
     
     def test_function_over_empty(self):
         """Test function with empty OVER clause."""
-        col = Column("pair", String())
+        col = Column("pair", String)
         func = Function("length", col).over()
         sql = func.to_sql()
         assert "length(pair) OVER ()" in sql
     
     def test_function_over_partition_by(self):
         """Test function with OVER PARTITION BY."""
-        col1 = Column("pair", String())
-        col2 = Column("exchange", String())
+        col1 = Column("pair", String)
+        col2 = Column("exchange", String)
         spec = WindowSpec().partition_by(col2)
         func = Function("length", col1).over(spec)
         sql = func.to_sql()
@@ -105,8 +105,8 @@ class TestFunctionWithOver:
     
     def test_function_over_order_by(self):
         """Test function with OVER ORDER BY."""
-        col1 = Column("price", Float64())
-        col2 = Column("timestamp_ms", UInt64())
+        col1 = Column("price", Float64)
+        col2 = Column("timestamp_ms", UInt64)
         spec = WindowSpec().order_by(col2)
         func = Function("firstValue", col1).over(spec)
         sql = func.to_sql()
@@ -115,8 +115,8 @@ class TestFunctionWithOver:
     
     def test_window_function_over(self):
         """Test window function with OVER clause."""
-        col = Column("pair", String())
-        spec = WindowSpec().partition_by(col).order_by(Column("timestamp_ms", UInt64()))
+        col = Column("pair", String)
+        spec = WindowSpec().partition_by(col).order_by(Column("timestamp_ms", UInt64))
         func = rowNumber().over(spec)
         sql = func.to_sql()
         assert "row_number()" in sql
@@ -125,7 +125,7 @@ class TestFunctionWithOver:
     
     def test_function_over_with_alias(self):
         """Test function with OVER clause and alias."""
-        col = Column("pair", String())
+        col = Column("pair", String)
         spec = WindowSpec().partition_by(col)
         func = Function("length", col).over(spec).alias("pair_length")
         sql = func.to_sql()
@@ -139,8 +139,8 @@ class TestAggregateFunctionWithOver:
     
     def test_avg_over(self):
         """Test AVG with OVER clause."""
-        col1 = Column("price", Float64())
-        col2 = Column("exchange", String())
+        col1 = Column("price", Float64)
+        col2 = Column("exchange", String)
         spec = WindowSpec().partition_by(col2)
         func = avg(col1).over(spec)
         sql = func.to_sql()
@@ -149,9 +149,9 @@ class TestAggregateFunctionWithOver:
     
     def test_sum_over(self):
         """Test SUM with OVER clause."""
-        col1 = Column("amount", Float64())
-        col2 = Column("pair", String())
-        spec = WindowSpec().partition_by(col2).order_by(Column("timestamp_ms", UInt64()))
+        col1 = Column("amount", Float64)
+        col2 = Column("pair", String)
+        spec = WindowSpec().partition_by(col2).order_by(Column("timestamp_ms", UInt64))
         func = sum_func(col1).over(spec)
         sql = func.to_sql()
         assert "SUM(amount)" in sql
@@ -160,7 +160,7 @@ class TestAggregateFunctionWithOver:
     
     def test_count_over(self):
         """Test COUNT with OVER clause."""
-        col = Column("pair", String())
+        col = Column("pair", String)
         spec = WindowSpec().partition_by(col)
         func = count().over(spec)
         sql = func.to_sql()
@@ -169,11 +169,11 @@ class TestAggregateFunctionWithOver:
     
     def test_avg_over_with_frame(self):
         """Test AVG with OVER clause and frame specification."""
-        col1 = Column("price", Float64())
-        col2 = Column("pair", String())
+        col1 = Column("price", Float64)
+        col2 = Column("pair", String)
         spec = (WindowSpec()
             .partition_by(col2)
-            .order_by(Column("timestamp_ms", UInt64()))
+            .order_by(Column("timestamp_ms", UInt64))
             .rows_between("UNBOUNDED PRECEDING", "CURRENT ROW"))
         func = avg(col1).over(spec)
         sql = func.to_sql()
@@ -183,8 +183,8 @@ class TestAggregateFunctionWithOver:
     
     def test_aggregate_over_with_alias(self):
         """Test aggregate function with OVER clause and alias."""
-        col1 = Column("price", Float64())
-        col2 = Column("exchange", String())
+        col1 = Column("price", Float64)
+        col2 = Column("exchange", String)
         spec = WindowSpec().partition_by(col2)
         func = avg(col1).over(spec).alias("avg_price")
         sql = func.to_sql()
@@ -198,8 +198,8 @@ class TestWindowFunctionsIntegration:
     
     def test_rank_over(self):
         """Test rank() with OVER clause."""
-        col = Column("pair", String())
-        spec = WindowSpec().partition_by(col).order_by(Column("price", Float64()), desc=True)
+        col = Column("pair", String)
+        spec = WindowSpec().partition_by(col).order_by(Column("price", Float64), desc=True)
         func = rank().over(spec)
         sql = func.to_sql()
         assert "rank()" in sql
@@ -208,8 +208,8 @@ class TestWindowFunctionsIntegration:
     
     def test_dense_rank_over(self):
         """Test denseRank with OVER clause."""
-        col = Column("exchange", String())
-        spec = WindowSpec().partition_by(col).order_by(Column("timestamp_ms", UInt64()))
+        col = Column("exchange", String)
+        spec = WindowSpec().partition_by(col).order_by(Column("timestamp_ms", UInt64))
         func = denseRank().over(spec)
         sql = func.to_sql()
         assert "denseRank()" in sql
@@ -217,9 +217,9 @@ class TestWindowFunctionsIntegration:
     
     def test_complex_window_query(self):
         """Test complex window function query."""
-        col1 = Column("price", Float64())
-        col2 = Column("pair", String())
-        col3 = Column("timestamp_ms", UInt64())
+        col1 = Column("price", Float64)
+        col2 = Column("pair", String)
+        col3 = Column("timestamp_ms", UInt64)
         
         # Running average partitioned by pair, ordered by timestamp
         spec = (WindowSpec()
@@ -238,9 +238,9 @@ class TestWindowFunctionsIntegration:
     
     def test_multiple_window_functions(self):
         """Test multiple window functions with different specifications."""
-        col1 = Column("price", Float64())
-        col2 = Column("pair", String())
-        col3 = Column("exchange", String())
+        col1 = Column("price", Float64)
+        col2 = Column("pair", String)
+        col3 = Column("exchange", String)
         
         # AVG partitioned by pair
         spec1 = WindowSpec().partition_by(col2)

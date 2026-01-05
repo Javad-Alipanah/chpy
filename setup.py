@@ -27,7 +27,7 @@ else:
 
 setup(
     name="chpy-orm",
-    version="0.1.0",
+    version="0.1.2",
     author="Javad Alipanah",
     author_email="javadalipanah@gmail.com",
     description="A Python wrapper for ClickHouse database operations",

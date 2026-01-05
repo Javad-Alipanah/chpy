@@ -18,21 +18,22 @@ class DDL:
         >>> from chpy import ClickHouseClient
         >>> from chpy.ddl import DDL
         >>> from chpy.orm import Table, Column
+        >>> from chpy.types import String, UInt64, Float64
         >>> 
         >>> client = ClickHouseClient(...)
         >>> ddl = DDL(client)
         >>> 
         >>> # Create table from schema
         >>> columns = [
-        ...     Column("id", "UInt64"),
-        ...     Column("name", "String"),
-        ...     Column("value", "Float64"),
+        ...     Column("id", UInt64()),
+        ...     Column("name", String()),
+        ...     Column("value", Float64()),
         ... ]
         >>> schema = Table("my_table", "my_db", columns)
         >>> ddl.create_table(schema, engine="MergeTree", order_by="id")
         >>> 
         >>> # Alter table
-        >>> ddl.add_column("my_db.my_table", Column("new_col", "String"))
+        >>> ddl.add_column("my_db.my_table", Column("new_col", String()))
         >>> ddl.drop_column("my_db.my_table", "old_col")
         >>> 
         >>> # Drop table
@@ -76,7 +77,7 @@ class DDL:
             
         Example:
             >>> from chpy.orm import Table, Column
-            >>> columns = [Column("id", "UInt64"), Column("name", "String")]
+            >>> columns = [Column("id", UInt64()), Column("name", String())]
             >>> schema = Table("users", "my_db", columns)
             >>> ddl.create_table(schema, order_by="id")
             >>> 
@@ -208,8 +209,8 @@ class DDL:
             if_not_exists: If True, adds IF NOT EXISTS clause (default: True)
             
         Example:
-            >>> ddl.add_column("my_db.my_table", Column("new_col", "String"))
-            >>> ddl.add_column("my_table", Column("new_col", "String"), database="my_db", after="id")
+            >>> ddl.add_column("my_db.my_table", Column("new_col", String()))
+            >>> ddl.add_column("my_table", Column("new_col", String()), database="my_db", after="id")
         """
         # Determine table name
         if isinstance(table, Table):
@@ -435,7 +436,7 @@ class DDL:
             
         Example:
             >>> from chpy.orm import Table, Column
-            >>> columns = [Column("pair", "String"), Column("avg_price", "Float64")]
+            >>> columns = [Column("pair", String()), Column("avg_price", Float64())]
             >>> target_table = Table("mv_target", "my_db", columns)
             >>> ddl.create_materialized_view(
             ...     "my_view",
@@ -602,7 +603,7 @@ class DDL:
             
         Example:
             >>> from chpy.orm import Table, Column
-            >>> columns = [Column("id", "UInt64"), Column("name", "String")]
+            >>> columns = [Column("id", UInt64()), Column("name", String())]
             >>> schema = Table("dist_table", "my_db", columns)
             >>> ddl.create_distributed_table(
             ...     schema,

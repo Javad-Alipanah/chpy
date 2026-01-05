@@ -4,6 +4,7 @@ Tests for ClickHouse type builders.
 
 import pytest
 from chpy.types import (
+    String, Float64, Float32, UInt64, UInt32, UInt16, UInt8, Int64, Int32, Int16, Int8, Bool,
     LowCardinality,
     Nullable,
     Array,
@@ -138,30 +139,30 @@ class TestTypesWithColumns:
     
     def test_column_with_type_builder(self):
         """Test Column with type builder."""
-        col1 = Column("name", LowCardinality("String"))
+        col1 = Column("name", LowCardinality(String()))
         assert col1.type == "LowCardinality(String)"
         
-        col2 = Column("tags", Array("String"))
+        col2 = Column("tags", Array(String()))
         assert col2.type == "Array(String)"
         
-        col3 = Column("metadata", Map("String", "String"))
+        col3 = Column("metadata", Map(String(), String()))
         assert col3.type == "Map(String, String)"
     
     def test_column_with_nested_types(self):
         """Test Column with nested type builders."""
-        col1 = Column("data", Nullable(Array("Int64")))
+        col1 = Column("data", Nullable(Array(Int64())))
         assert col1.type == "Nullable(Array(Int64))"
         
-        col2 = Column("info", LowCardinality(Nullable("String")))
+        col2 = Column("info", LowCardinality(Nullable(String())))
         assert col2.type == "LowCardinality(Nullable(String))"
     
     def test_table_with_type_builders(self):
         """Test Table with columns using type builders."""
         columns = [
-            Column("id", "UInt64"),
-            Column("name", LowCardinality("String")),
-            Column("tags", Array("String")),
-            Column("metadata", Map("String", "String")),
+            Column("id", UInt64()),
+            Column("name", LowCardinality(String())),
+            Column("tags", Array(String())),
+            Column("metadata", Map(String(), String())),
             Column("created_at", DateTime("UTC")),
         ]
         table = Table("test_table", "test_db", columns)

@@ -12,6 +12,7 @@ from chpy.orm import Column, ColumnExpression, Table, Row
 from chpy.functions.base import Function, AggregateFunction
 from chpy.functions.aggregate import count, avg, sum as sum_func
 from chpy.functions.string import length, upper
+from chpy.types import String, Float64, Float32, UInt64, UInt32, UInt16, UInt8, Int64, Int32, Int16, Int8, Bool
 
 
 class TestQueryBuilder:
@@ -63,15 +64,15 @@ class TestQueryBuilder:
     
     def test_select_column_objects(self, builder):
         """Test select with Column objects."""
-        col1 = Column("pair", "String")
-        col2 = Column("price", "Float64")
+        col1 = Column("pair", String())
+        col2 = Column("price", Float64())
         builder.select(col1, col2)
         query = builder._build_query()
         assert "SELECT pair, price" in query
     
     def test_select_function(self, builder):
         """Test select with Function objects."""
-        col = Column("pair", "String")
+        col = Column("pair", String())
         func = length(col)
         builder.select(func)
         query = builder._build_query()
@@ -79,7 +80,7 @@ class TestQueryBuilder:
     
     def test_select_aggregate_function(self, builder):
         """Test select with AggregateFunction objects."""
-        col = Column("price", "Float64")
+        col = Column("price", Float64())
         func = avg(col)
         builder.select(func)
         query = builder._build_query()
@@ -87,8 +88,8 @@ class TestQueryBuilder:
     
     def test_select_mixed(self, builder):
         """Test select with mixed column types."""
-        col1 = Column("pair", "String")
-        col2 = Column("price", "Float64")
+        col1 = Column("pair", String())
+        col2 = Column("price", Float64())
         func = avg(col2)
         builder.select(col1, func, "raw_column")
         query = builder._build_query()
@@ -103,7 +104,7 @@ class TestQueryBuilder:
     
     def test_where(self, builder):
         """Test where clause."""
-        col = Column("pair", "String")
+        col = Column("pair", String())
         expr = col == "BTC-USDT"
         builder.where(expr)
         
@@ -113,8 +114,8 @@ class TestQueryBuilder:
     
     def test_where_multiple(self, builder):
         """Test multiple where clauses."""
-        col1 = Column("pair", "String")
-        col2 = Column("exchange", "String")
+        col1 = Column("pair", String())
+        col2 = Column("exchange", String())
         builder.where(col1 == "BTC-USDT")
         builder.where(col2 == "BINANCE")
         
@@ -126,7 +127,7 @@ class TestQueryBuilder:
     
     def test_order_by_column(self, builder):
         """Test order_by with Column object."""
-        col = Column("timestamp_ms", "UInt64")
+        col = Column("timestamp_ms", UInt64())
         builder.order_by(col, desc=True)
         
         query = builder._build_query()
@@ -153,8 +154,8 @@ class TestQueryBuilder:
     
     def test_group_by(self, builder):
         """Test group_by clause."""
-        col1 = Column("pair", "String")
-        col2 = Column("exchange", "String")
+        col1 = Column("pair", String())
+        col2 = Column("exchange", String())
         builder.group_by(col1, col2)
         
         query = builder._build_query()
@@ -169,8 +170,8 @@ class TestQueryBuilder:
     
     def test_build_query_complete(self, builder):
         """Test complete query building."""
-        col1 = Column("pair", "String")
-        col2 = Column("price", "Float64")
+        col1 = Column("pair", String())
+        col2 = Column("price", Float64())
         
         builder.select(col1, avg(col2).alias("avg_price"))
         builder.where(col1 == "BTC-USDT")
@@ -199,8 +200,8 @@ class TestQueryBuilder:
     
     def test_to_dict_key_value(self, builder, mock_client):
         """Test to_dict with key and value columns."""
-        key_col = Column("pair", "String")
-        value_col = Column("price", "Float64")
+        key_col = Column("pair", String())
+        value_col = Column("price", Float64())
         
         result = builder.to_dict(key_col, value_col)
         
@@ -210,7 +211,7 @@ class TestQueryBuilder:
     
     def test_to_dict_key_only(self, builder, mock_client):
         """Test to_dict with key column only."""
-        key_col = Column("pair", "String")
+        key_col = Column("pair", String())
         
         result = builder.to_dict(key_col)
         
@@ -421,7 +422,7 @@ class TestQueryBuilder:
     
     def test_repr(self, builder):
         """Test string representation."""
-        builder.where(Column("pair", "String") == "BTC-USDT")
+        builder.where(Column("pair", String()) == "BTC-USDT")
         builder.limit(10)
         
         repr_str = repr(builder)
@@ -437,15 +438,15 @@ class TestQueryBuilder:
     def other_table(self):
         """Create a sample table for JOIN tests."""
         columns = [
-            Column("id", "UInt64"),
-            Column("symbol", "String"),
-            Column("name", "String"),
+            Column("id", UInt64()),
+            Column("symbol", String()),
+            Column("name", String()),
         ]
         return Table("other_table", "test_db", columns)
     
     def test_join_inner_with_column_expression(self, builder, other_table):
         """Test INNER JOIN with column expression condition."""
-        col1 = Column("pair", "String")
+        col1 = Column("pair", String())
         col2 = other_table.symbol
         
         builder.join(other_table, condition=(col1 == col2), join_type="INNER")
@@ -457,7 +458,7 @@ class TestQueryBuilder:
     
     def test_join_left_with_column_expression(self, builder, other_table):
         """Test LEFT JOIN with column expression condition."""
-        col1 = Column("pair", "String")
+        col1 = Column("pair", String())
         col2 = other_table.symbol
         
         builder.join(other_table, condition=(col1 == col2), join_type="LEFT")
@@ -468,7 +469,7 @@ class TestQueryBuilder:
     
     def test_join_right_with_column_expression(self, builder, other_table):
         """Test RIGHT JOIN with column expression condition."""
-        col1 = Column("pair", "String")
+        col1 = Column("pair", String())
         col2 = other_table.symbol
         
         builder.join(other_table, condition=(col1 == col2), join_type="RIGHT")
@@ -478,7 +479,7 @@ class TestQueryBuilder:
     
     def test_join_full_with_column_expression(self, builder, other_table):
         """Test FULL JOIN with column expression condition."""
-        col1 = Column("pair", "String")
+        col1 = Column("pair", String())
         col2 = other_table.symbol
         
         builder.join(other_table, condition=(col1 == col2), join_type="FULL")
@@ -496,8 +497,8 @@ class TestQueryBuilder:
     
     def test_join_with_string_table(self, builder):
         """Test JOIN with string table name."""
-        col1 = Column("pair", "String")
-        col2 = Column("symbol", "String")
+        col1 = Column("pair", String())
+        col2 = Column("symbol", String())
         
         builder.join("test_db.other_table", condition=(col1 == col2))
         
@@ -507,7 +508,7 @@ class TestQueryBuilder:
     
     def test_join_with_alias(self, builder, other_table):
         """Test JOIN with table alias."""
-        col1 = Column("pair", "String")
+        col1 = Column("pair", String())
         col2 = other_table.symbol
         
         builder.join(other_table, condition=(col1 == col2), alias="ot")
@@ -525,9 +526,9 @@ class TestQueryBuilder:
     
     def test_join_with_combined_expression(self, builder, other_table):
         """Test JOIN with combined expression (AND/OR)."""
-        col1 = Column("pair", "String")
+        col1 = Column("pair", String())
         col2 = other_table.symbol
-        col3 = Column("exchange", "String")
+        col3 = Column("exchange", String())
         col4 = other_table.name
         
         condition = (col1 == col2) & (col3 == col4)
@@ -539,11 +540,11 @@ class TestQueryBuilder:
     
     def test_join_multiple_tables(self, builder, other_table):
         """Test multiple JOINs."""
-        col1 = Column("pair", "String")
+        col1 = Column("pair", String())
         col2 = other_table.symbol
         
         # Create another table for second join
-        third_table_cols = [Column("quote_id", "UInt64"), Column("value", "Float64")]
+        third_table_cols = [Column("quote_id", UInt64()), Column("value", Float64())]
         third_table = Table("third_table", "test_db", third_table_cols)
         
         builder.join(other_table, condition=(col1 == col2))
@@ -556,9 +557,9 @@ class TestQueryBuilder:
     
     def test_join_with_where_clause(self, builder, other_table):
         """Test JOIN combined with WHERE clause."""
-        col1 = Column("pair", "String")
+        col1 = Column("pair", String())
         col2 = other_table.symbol
-        col3 = Column("exchange", "String")
+        col3 = Column("exchange", String())
         
         builder.join(other_table, condition=(col1 == col2))
         builder.where(col3 == "BINANCE")
@@ -570,7 +571,7 @@ class TestQueryBuilder:
     
     def test_join_with_select_table_qualified_columns(self, builder, other_table):
         """Test JOIN with table-qualified column selection."""
-        col1 = Column("pair", "String")
+        col1 = Column("pair", String())
         col2 = other_table.symbol
         col3 = other_table.name
         
@@ -584,7 +585,7 @@ class TestQueryBuilder:
     
     def test_join_error_cross_with_condition(self, builder, other_table):
         """Test that CROSS JOIN raises error with condition."""
-        col1 = Column("pair", "String")
+        col1 = Column("pair", String())
         col2 = other_table.symbol
         
         with pytest.raises(ValueError, match="CROSS JOIN cannot have a condition"):
@@ -607,9 +608,9 @@ class TestQueryBuilder:
     
     def test_join_complete_query(self, builder, other_table):
         """Test complete query with JOIN, WHERE, GROUP BY, ORDER BY, LIMIT."""
-        col1 = Column("pair", "String")
+        col1 = Column("pair", String())
         col2 = other_table.symbol
-        col3 = Column("price", "Float64")
+        col3 = Column("price", Float64())
         
         builder.select(col1, col2, avg(col3).alias("avg_price"))
         builder.join(other_table, condition=(col1 == col2), alias="ot")
@@ -630,7 +631,7 @@ class TestQueryBuilder:
     
     def test_join_column_to_column_comparison(self, builder, other_table):
         """Test JOIN with column-to-column comparison."""
-        col1 = Column("pair", "String")
+        col1 = Column("pair", String())
         col2 = other_table.symbol
         
         # Test different operators
@@ -651,8 +652,8 @@ class TestQueryBuilder:
     def test_init_with_schema(self, mock_client, escape_func):
         """Test QueryBuilder initialization with schema."""
         columns = [
-            Column("id", "UInt64"),
-            Column("name", "String"),
+            Column("id", UInt64()),
+            Column("name", String()),
         ]
         schema = Table("test_table", "test_db", columns)
         
@@ -668,9 +669,9 @@ class TestQueryBuilder:
     def test_to_list_with_schema_returns_row_objects(self, mock_client, escape_func):
         """Test that to_list returns Row objects when schema is available."""
         columns = [
-            Column("id", "UInt64"),
-            Column("name", "String"),
-            Column("value", "Float64"),
+            Column("id", UInt64()),
+            Column("name", String()),
+            Column("value", Float64()),
         ]
         schema = Table("test_table", "test_db", columns)
         
@@ -718,7 +719,7 @@ class TestQueryBuilder:
     
     def test_first_with_schema_returns_row(self, mock_client, escape_func):
         """Test that first returns Row object when schema is available."""
-        columns = [Column("id", "UInt64"), Column("name", "String")]
+        columns = [Column("id", UInt64()), Column("name", String())]
         schema = Table("test_table", "test_db", columns)
         
         mock_client.execute.return_value = [
@@ -747,7 +748,7 @@ class TestQueryBuilder:
     
     def test_first_empty_with_schema(self, mock_client, escape_func):
         """Test first returns None when no results (with schema)."""
-        columns = [Column("id", "UInt64")]
+        columns = [Column("id", UInt64())]
         schema = Table("test_table", "test_db", columns)
         
         mock_client.execute.return_value = []
@@ -759,7 +760,7 @@ class TestQueryBuilder:
     
     def test_iter_with_schema_returns_row_objects(self, mock_client, escape_func):
         """Test that iteration returns Row objects when schema is available."""
-        columns = [Column("id", "UInt64"), Column("name", "String")]
+        columns = [Column("id", UInt64()), Column("name", String())]
         schema = Table("test_table", "test_db", columns)
         
         mock_client.execute.return_value = [
@@ -793,9 +794,9 @@ class TestQueryBuilder:
     def test_row_object_attribute_and_dict_access(self, mock_client, escape_func):
         """Test that Row objects support both attribute and dictionary access."""
         columns = [
-            Column("pair", "String"),
-            Column("price", "Float64"),
-            Column("exchange", "String"),
+            Column("pair", String()),
+            Column("price", Float64()),
+            Column("exchange", String()),
         ]
         schema = Table("test_table", "test_db", columns)
         

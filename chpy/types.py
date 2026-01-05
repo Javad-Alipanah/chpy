@@ -322,6 +322,215 @@ class DateTime64(TypeBuilder):
         return f"DateTime64({', '.join(parts)})"
 
 
+# Primitive types
+class String(TypeBuilder):
+    """String type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "String"
+
+
+class Bool(TypeBuilder):
+    """Bool type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "Bool"
+
+
+# Unsigned integer types
+class UInt8(TypeBuilder):
+    """UInt8 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "UInt8"
+
+
+class UInt16(TypeBuilder):
+    """UInt16 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "UInt16"
+
+
+class UInt32(TypeBuilder):
+    """UInt32 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "UInt32"
+
+
+class UInt64(TypeBuilder):
+    """UInt64 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "UInt64"
+
+
+class UInt128(TypeBuilder):
+    """UInt128 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "UInt128"
+
+
+class UInt256(TypeBuilder):
+    """UInt256 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "UInt256"
+
+
+# Signed integer types
+class Int8(TypeBuilder):
+    """Int8 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "Int8"
+
+
+class Int16(TypeBuilder):
+    """Int16 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "Int16"
+
+
+class Int32(TypeBuilder):
+    """Int32 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "Int32"
+
+
+class Int64(TypeBuilder):
+    """Int64 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "Int64"
+
+
+class Int128(TypeBuilder):
+    """Int128 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "Int128"
+
+
+class Int256(TypeBuilder):
+    """Int256 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "Int256"
+
+
+# Floating point types
+class Float32(TypeBuilder):
+    """Float32 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "Float32"
+
+
+class Float64(TypeBuilder):
+    """Float64 type for ClickHouse."""
+    
+    def __str__(self) -> str:
+        return "Float64"
+
+
+# Decimal types
+class Decimal32(TypeBuilder):
+    """
+    Decimal32 type for ClickHouse.
+    
+    Usage:
+        >>> Decimal32(2)  # precision 2
+    """
+    
+    def __init__(self, scale: int):
+        """
+        Initialize Decimal32 type.
+        
+        Args:
+            scale: Decimal scale (number of decimal places)
+        """
+        if not (0 <= scale <= 9):
+            raise ValueError("Decimal32 scale must be between 0 and 9")
+        self.scale = scale
+    
+    def __str__(self) -> str:
+        return f"Decimal32({self.scale})"
+
+
+class Decimal64(TypeBuilder):
+    """
+    Decimal64 type for ClickHouse.
+    
+    Usage:
+        >>> Decimal64(2)  # precision 2
+    """
+    
+    def __init__(self, scale: int):
+        """
+        Initialize Decimal64 type.
+        
+        Args:
+            scale: Decimal scale (number of decimal places)
+        """
+        if not (0 <= scale <= 18):
+            raise ValueError("Decimal64 scale must be between 0 and 18")
+        self.scale = scale
+    
+    def __str__(self) -> str:
+        return f"Decimal64({self.scale})"
+
+
+class Decimal128(TypeBuilder):
+    """
+    Decimal128 type for ClickHouse.
+    
+    Usage:
+        >>> Decimal128(2)  # precision 2
+    """
+    
+    def __init__(self, scale: int):
+        """
+        Initialize Decimal128 type.
+        
+        Args:
+            scale: Decimal scale (number of decimal places)
+        """
+        if not (0 <= scale <= 38):
+            raise ValueError("Decimal128 scale must be between 0 and 38")
+        self.scale = scale
+    
+    def __str__(self) -> str:
+        return f"Decimal128({self.scale})"
+
+
+class Decimal256(TypeBuilder):
+    """
+    Decimal256 type for ClickHouse.
+    
+    Usage:
+        >>> Decimal256(2)  # precision 2
+    """
+    
+    def __init__(self, scale: int):
+        """
+        Initialize Decimal256 type.
+        
+        Args:
+            scale: Decimal scale (number of decimal places)
+        """
+        if not (0 <= scale <= 76):
+            raise ValueError("Decimal256 scale must be between 0 and 76")
+        self.scale = scale
+    
+    def __str__(self) -> str:
+        return f"Decimal256({self.scale})"
+
+
 # Convenience functions for common type combinations
 def LowCardinalityNullable(inner_type: Union[str, TypeBuilder]) -> LowCardinality:
     """Create LowCardinality(Nullable(type))."""

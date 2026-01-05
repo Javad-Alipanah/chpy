@@ -29,12 +29,13 @@ class TableWrapper:
     Example:
         >>> from chpy import ClickHouseClient, TableWrapper
         >>> from chpy.orm import Table, Column
+        >>> from chpy.types import String, UInt64
         >>> 
         >>> # Create schema (optional, for type safety)
         >>> columns = [
-        ...     Column("id", "UInt64"),
-        ...     Column("name", "String"),
-        ...     Column("value", "Float64"),
+        ...     Column("id", UInt64()),
+        ...     Column("name", String()),
+        ...     Column("value", Float64()),
         ... ]
         >>> schema = Table("my_table", "my_db", columns)
         >>> 

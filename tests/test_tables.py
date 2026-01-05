@@ -8,6 +8,7 @@ from chpy.tables import CryptoQuotesTable, TableWrapper
 from chpy.client import ClickHouseClient
 from chpy.orm import Column, Table, Row
 from chpy.schema import crypto_quotes
+from chpy.types import String, Float64, Float32, UInt64, UInt32, UInt16, UInt8, Int64, Int32, Int16, Int8, Bool
 
 
 class TestCryptoQuotesTable:
@@ -196,9 +197,9 @@ class TestTableWrapper:
     def test_init_with_schema(self, mock_client):
         """Test initialization with schema."""
         columns = [
-            Column("id", "UInt64"),
-            Column("name", "String"),
-            Column("value", "Float64"),
+            Column("id", UInt64()),
+            Column("name", String()),
+            Column("value", Float64()),
         ]
         schema = Table("my_table", "test_db", columns)
         
@@ -248,8 +249,8 @@ class TestTableWrapper:
         from chpy.query_builder import QueryBuilder
         
         columns = [
-            Column("id", "UInt64"),
-            Column("name", "String"),
+            Column("id", UInt64()),
+            Column("name", String()),
         ]
         schema = Table("my_table", "test_db", columns)
         table = TableWrapper(mock_client, "my_table", "test_db", schema=schema)
@@ -283,12 +284,12 @@ class TestTableWrapper:
     def test_multiple_table_wrappers(self, mock_client):
         """Test creating multiple table wrappers for different tables."""
         # Create schema for first table
-        columns1 = [Column("id", "UInt64"), Column("name", "String")]
+        columns1 = [Column("id", UInt64()), Column("name", String())]
         schema1 = Table("table1", "test_db", columns1)
         table1 = TableWrapper(mock_client, "table1", "test_db", schema=schema1)
         
         # Create schema for second table
-        columns2 = [Column("user_id", "UInt64"), Column("email", "String")]
+        columns2 = [Column("user_id", UInt64()), Column("email", String())]
         schema2 = Table("table2", "test_db", columns2)
         table2 = TableWrapper(mock_client, "table2", "test_db", schema=schema2)
         
@@ -311,9 +312,9 @@ class TestTableWrapper:
     def test_query_returns_row_objects_with_schema(self, mock_client):
         """Test that query returns Row objects when schema is available."""
         columns = [
-            Column("id", "UInt64"),
-            Column("name", "String"),
-            Column("value", "Float64"),
+            Column("id", UInt64()),
+            Column("name", String()),
+            Column("value", Float64()),
         ]
         schema = Table("my_table", "test_db", columns)
         
@@ -358,7 +359,7 @@ class TestTableWrapper:
     
     def test_iteration_returns_row_objects_with_schema(self, mock_client):
         """Test that iteration over query returns Row objects when schema is available."""
-        columns = [Column("id", "UInt64"), Column("name", "String")]
+        columns = [Column("id", UInt64()), Column("name", String())]
         schema = Table("my_table", "test_db", columns)
         
         mock_client.execute.return_value = [
@@ -393,7 +394,7 @@ class TestTableWrapper:
     
     def test_first_returns_row_object_with_schema(self, mock_client):
         """Test that first() returns Row object when schema is available."""
-        columns = [Column("id", "UInt64"), Column("name", "String")]
+        columns = [Column("id", UInt64()), Column("name", String())]
         schema = Table("my_table", "test_db", columns)
         
         mock_client.execute.return_value = [
@@ -450,9 +451,9 @@ class TestTableWrapper:
     def test_row_object_programmatic_iteration(self, mock_client):
         """Test programmatic iteration over Row objects."""
         columns = [
-            Column("id", "UInt64"),
-            Column("name", "String"),
-            Column("value", "Float64"),
+            Column("id", UInt64()),
+            Column("name", String()),
+            Column("value", Float64()),
         ]
         schema = Table("my_table", "test_db", columns)
         
@@ -486,7 +487,7 @@ class TestTableWrapper:
     
     def test_row_object_to_dict_conversion(self, mock_client):
         """Test converting Row objects to dictionaries."""
-        columns = [Column("id", "UInt64"), Column("name", "String")]
+        columns = [Column("id", UInt64()), Column("name", String())]
         schema = Table("my_table", "test_db", columns)
         
         mock_client.execute.return_value = [

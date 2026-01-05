@@ -5,6 +5,7 @@ Tests for chpy.orm module.
 import pytest
 from datetime import datetime
 from chpy.orm import Column, ColumnExpression, CombinedExpression, Table, Row
+from chpy.types import String, Float64, Float32, UInt64, UInt32, UInt16, UInt8, Int64, Int32, Int16, Int8, Bool
 
 
 class TestColumn:
@@ -12,20 +13,20 @@ class TestColumn:
     
     def test_init(self):
         """Test column initialization."""
-        col = Column("test_col", "String")
+        col = Column("test_col", String())
         assert col.name == "test_col"
         assert col.type == "String"
         assert col.table is None
     
     def test_init_with_table(self, sample_table):
         """Test column initialization with table."""
-        col = Column("test_col", "String", sample_table)
+        col = Column("test_col", String(), sample_table)
         assert col.name == "test_col"
         assert col.table == sample_table
     
     def test_eq(self):
         """Test equality expression."""
-        col = Column("test_col", "String")
+        col = Column("test_col", String())
         expr = col == "value"
         
         assert isinstance(expr, ColumnExpression)
@@ -35,7 +36,7 @@ class TestColumn:
     
     def test_ne(self):
         """Test inequality expression."""
-        col = Column("test_col", "String")
+        col = Column("test_col", String())
         expr = col != "value"
         
         assert isinstance(expr, ColumnExpression)
@@ -44,7 +45,7 @@ class TestColumn:
     
     def test_lt(self):
         """Test less-than expression."""
-        col = Column("price", "Float64")
+        col = Column("price", Float64())
         expr = col < 100.0
         
         assert isinstance(expr, ColumnExpression)
@@ -53,7 +54,7 @@ class TestColumn:
     
     def test_le(self):
         """Test less-than-or-equal expression."""
-        col = Column("price", "Float64")
+        col = Column("price", Float64())
         expr = col <= 100.0
         
         assert isinstance(expr, ColumnExpression)
@@ -62,7 +63,7 @@ class TestColumn:
     
     def test_gt(self):
         """Test greater-than expression."""
-        col = Column("price", "Float64")
+        col = Column("price", Float64())
         expr = col > 100.0
         
         assert isinstance(expr, ColumnExpression)
@@ -71,7 +72,7 @@ class TestColumn:
     
     def test_ge(self):
         """Test greater-than-or-equal expression."""
-        col = Column("price", "Float64")
+        col = Column("price", Float64())
         expr = col >= 100.0
         
         assert isinstance(expr, ColumnExpression)
@@ -80,7 +81,7 @@ class TestColumn:
     
     def test_in_(self):
         """Test IN expression."""
-        col = Column("pair", "String")
+        col = Column("pair", String())
         expr = col.in_(["BTC-USDT", "ETH-USDT"])
         
         assert isinstance(expr, ColumnExpression)
@@ -89,7 +90,7 @@ class TestColumn:
     
     def test_not_in(self):
         """Test NOT IN expression."""
-        col = Column("pair", "String")
+        col = Column("pair", String())
         expr = col.not_in(["BTC-USDT", "ETH-USDT"])
         
         assert isinstance(expr, ColumnExpression)
@@ -98,7 +99,7 @@ class TestColumn:
     
     def test_like(self):
         """Test LIKE expression."""
-        col = Column("pair", "String")
+        col = Column("pair", String())
         expr = col.like("BTC-%")
         
         assert isinstance(expr, ColumnExpression)
@@ -107,18 +108,18 @@ class TestColumn:
     
     def test_str(self):
         """Test string representation."""
-        col = Column("test_col", "String")
+        col = Column("test_col", String())
         assert str(col) == "test_col"
     
     def test_repr_without_table(self):
         """Test representation without table."""
-        col = Column("test_col", "String")
+        col = Column("test_col", String())
         assert repr(col) == "test_col"
     
     def test_repr_with_table(self):
         """Test representation with table."""
         table = Table("test_table", "test_db", [])
-        col = Column("test_col", "String", table)
+        col = Column("test_col", String(), table)
         assert repr(col) == "test_table.test_col"
 
 
@@ -127,7 +128,7 @@ class TestColumnExpression:
     
     def test_to_sql_equals_string(self, escape_string_func):
         """Test SQL generation for string equality."""
-        col = Column("pair", "String")
+        col = Column("pair", String())
         expr = col == "BTC-USDT"
         
         sql = expr.to_sql(escape_string_func)
@@ -135,7 +136,7 @@ class TestColumnExpression:
     
     def test_to_sql_equals_number(self, escape_string_func):
         """Test SQL generation for number equality."""
-        col = Column("price", "Float64")
+        col = Column("price", Float64())
         expr = col == 100.0
         
         sql = expr.to_sql(escape_string_func)
@@ -143,7 +144,7 @@ class TestColumnExpression:
     
     def test_to_sql_equals_datetime(self, escape_string_func):
         """Test SQL generation for datetime equality."""
-        col = Column("timestamp_ms", "UInt64")
+        col = Column("timestamp_ms", UInt64())
         dt = datetime(2024, 1, 1, 12, 0, 0)
         expr = col >= dt
         
@@ -154,7 +155,7 @@ class TestColumnExpression:
     
     def test_to_sql_in_strings(self, escape_string_func):
         """Test SQL generation for IN with strings."""
-        col = Column("pair", "String")
+        col = Column("pair", String())
         expr = col.in_(["BTC-USDT", "ETH-USDT"])
         
         sql = expr.to_sql(escape_string_func)
@@ -162,7 +163,7 @@ class TestColumnExpression:
     
     def test_to_sql_in_numbers(self, escape_string_func):
         """Test SQL generation for IN with numbers."""
-        col = Column("id", "UInt64")
+        col = Column("id", UInt64())
         expr = col.in_([1, 2, 3])
         
         sql = expr.to_sql(escape_string_func)
@@ -170,7 +171,7 @@ class TestColumnExpression:
     
     def test_to_sql_not_in(self, escape_string_func):
         """Test SQL generation for NOT IN."""
-        col = Column("pair", "String")
+        col = Column("pair", String())
         expr = col.not_in(["BTC-USDT", "ETH-USDT"])
         
         sql = expr.to_sql(escape_string_func)
@@ -178,7 +179,7 @@ class TestColumnExpression:
     
     def test_to_sql_like(self, escape_string_func):
         """Test SQL generation for LIKE."""
-        col = Column("pair", "String")
+        col = Column("pair", String())
         expr = col.like("BTC-%")
         
         sql = expr.to_sql(escape_string_func)
@@ -186,7 +187,7 @@ class TestColumnExpression:
     
     def test_to_sql_escape_string(self, escape_string_func):
         """Test SQL generation with string escaping."""
-        col = Column("name", "String")
+        col = Column("name", String())
         expr = col == "O'Brien"
         
         sql = expr.to_sql(escape_string_func)
@@ -194,8 +195,8 @@ class TestColumnExpression:
     
     def test_and_operator(self):
         """Test AND operator combination."""
-        col1 = Column("pair", "String")
-        col2 = Column("exchange", "String")
+        col1 = Column("pair", String())
+        col2 = Column("exchange", String())
         expr1 = col1 == "BTC-USDT"
         expr2 = col2 == "BINANCE"
         
@@ -208,8 +209,8 @@ class TestColumnExpression:
     
     def test_or_operator(self):
         """Test OR operator combination."""
-        col1 = Column("pair", "String")
-        col2 = Column("pair", "String")
+        col1 = Column("pair", String())
+        col2 = Column("pair", String())
         expr1 = col1 == "BTC-USDT"
         expr2 = col2 == "ETH-USDT"
         
@@ -222,7 +223,7 @@ class TestColumnExpression:
     
     def test_invert(self):
         """Test expression negation."""
-        col = Column("pair", "String")
+        col = Column("pair", String())
         expr = col == "BTC-USDT"
         
         negated = ~expr
@@ -237,8 +238,8 @@ class TestCombinedExpression:
     
     def test_to_sql_and(self, escape_string_func):
         """Test SQL generation for AND expression."""
-        col1 = Column("pair", "String")
-        col2 = Column("exchange", "String")
+        col1 = Column("pair", String())
+        col2 = Column("exchange", String())
         expr1 = col1 == "BTC-USDT"
         expr2 = col2 == "BINANCE"
         combined = expr1 & expr2
@@ -248,8 +249,8 @@ class TestCombinedExpression:
     
     def test_to_sql_or(self, escape_string_func):
         """Test SQL generation for OR expression."""
-        col1 = Column("pair", "String")
-        col2 = Column("pair", "String")
+        col1 = Column("pair", String())
+        col2 = Column("pair", String())
         expr1 = col1 == "BTC-USDT"
         expr2 = col2 == "ETH-USDT"
         combined = expr1 | expr2
@@ -259,9 +260,9 @@ class TestCombinedExpression:
     
     def test_to_sql_nested(self, escape_string_func):
         """Test SQL generation for nested expressions."""
-        col1 = Column("pair", "String")
-        col2 = Column("exchange", "String")
-        col3 = Column("price", "Float64")
+        col1 = Column("pair", String())
+        col2 = Column("exchange", String())
+        col3 = Column("price", Float64())
         
         expr1 = col1 == "BTC-USDT"
         expr2 = col2 == "BINANCE"
@@ -275,9 +276,9 @@ class TestCombinedExpression:
     
     def test_and_operator(self):
         """Test AND operator on CombinedExpression."""
-        col1 = Column("pair", "String")
-        col2 = Column("exchange", "String")
-        col3 = Column("price", "Float64")
+        col1 = Column("pair", String())
+        col2 = Column("exchange", String())
+        col3 = Column("price", Float64())
         
         expr1 = col1 == "BTC-USDT"
         expr2 = col2 == "BINANCE"
@@ -291,9 +292,9 @@ class TestCombinedExpression:
     
     def test_or_operator(self):
         """Test OR operator on CombinedExpression."""
-        col1 = Column("pair", "String")
-        col2 = Column("exchange", "String")
-        col3 = Column("pair", "String")
+        col1 = Column("pair", String())
+        col2 = Column("exchange", String())
+        col3 = Column("pair", String())
         
         expr1 = col1 == "BTC-USDT"
         expr2 = col2 == "BINANCE"
@@ -312,8 +313,8 @@ class TestTable:
     def test_init(self):
         """Test table initialization."""
         columns = [
-            Column("id", "UInt64"),
-            Column("name", "String"),
+            Column("id", UInt64()),
+            Column("name", String()),
         ]
         table = Table("test_table", "test_db", columns)
         
@@ -325,8 +326,8 @@ class TestTable:
     def test_column_access(self):
         """Test column access via attributes."""
         columns = [
-            Column("id", "UInt64"),
-            Column("name", "String"),
+            Column("id", UInt64()),
+            Column("name", String()),
         ]
         table = Table("test_table", "test_db", columns)
         
@@ -338,8 +339,8 @@ class TestTable:
     def test_get_column(self):
         """Test get_column method."""
         columns = [
-            Column("id", "UInt64"),
-            Column("name", "String"),
+            Column("id", UInt64()),
+            Column("name", String()),
         ]
         table = Table("test_table", "test_db", columns)
         
@@ -352,8 +353,8 @@ class TestTable:
     def test_get_all_columns(self):
         """Test get_all_columns method."""
         columns = [
-            Column("id", "UInt64"),
-            Column("name", "String"),
+            Column("id", UInt64()),
+            Column("name", String()),
         ]
         table = Table("test_table", "test_db", columns)
         
@@ -365,8 +366,8 @@ class TestTable:
     def test_getitem(self):
         """Test bracket notation for column access."""
         columns = [
-            Column("id", "UInt64"),
-            Column("name", "String"),
+            Column("id", UInt64()),
+            Column("name", String()),
         ]
         table = Table("test_table", "test_db", columns)
         
@@ -379,7 +380,7 @@ class TestTable:
     def test_repr(self):
         """Test table representation."""
         columns = [
-            Column("id", "UInt64"),
+            Column("id", UInt64()),
         ]
         table = Table("test_table", "test_db", columns)
         

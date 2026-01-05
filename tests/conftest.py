@@ -9,6 +9,7 @@ from chpy.client import ClickHouseClient
 from chpy.orm import Column, Table
 from chpy.schema import crypto_quotes
 from chpy.tables import CryptoQuotesTable
+from chpy.types import String, Float64, Float32, UInt64, UInt32, UInt16, UInt8, Int64, Int32, Int16, Int8, Bool
 
 
 @pytest.fixture
@@ -37,16 +38,16 @@ def mock_query_result():
 @pytest.fixture
 def sample_column():
     """Sample Column object for testing."""
-    return Column("test_column", "String")
+    return Column("test_column", String())
 
 
 @pytest.fixture
 def sample_table():
     """Sample Table object for testing."""
     columns = [
-        Column("id", "UInt64"),
-        Column("name", "String"),
-        Column("value", "Float64"),
+        Column("id", UInt64()),
+        Column("name", String()),
+        Column("value", Float64()),
     ]
     return Table("test_table", "test_db", columns)
 

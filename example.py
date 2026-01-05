@@ -80,15 +80,15 @@ def example_1_basic_query(table):
         print("   No data found")
 
 
-def example_2_table_shortcut(table):
-    """Example 2: Using table.c shortcut."""
-    print("2. Using table.c shortcut for columns...")
+def example_2_direct_column_access(table):
+    """Example 2: Direct column access."""
+    print("2. Using direct column access...")
     print("-" * 70)
     result = (table.query()
-        .where(table.c.pair == "BTC-USDT")
-        .where(table.c.best_bid_price > 50000)
-        .where(table.c.timestamp_ms >= datetime(2025, 12, 20, 0, 0, 0))
-        .order_by(table.c.timestamp_ms, desc=True)
+        .where(table.pair == "BTC-USDT")
+        .where(table.best_bid_price > 50000)
+        .where(table.timestamp_ms >= datetime(2025, 12, 20, 0, 0, 0))
+        .order_by(table.timestamp_ms, desc=True)
         .limit(5)
         .to_list())
     print(f"   Found {len(result)} results")
@@ -325,17 +325,17 @@ def example_18_or_expression(table):
     print(f"   Found {len(result)} results for BTC-USDT OR ETH-USDT")
 
 
-def example_19_table_columns(table):
-    """Example 19: Using table.columns."""
-    print("19. Using table.columns for column access...")
+def example_19_direct_column_access(table):
+    """Example 19: Direct column access from table instance."""
+    print("19. Using direct column access from table instance...")
     print("-" * 70)
     result = (table.query()
-        .where(table.columns.pair == "BTC-USDT")
-        .where(table.columns.best_bid_price > 50000)
-        .where(crypto_quotes.timestamp_ms >= datetime(2025, 12, 20, 0, 0, 0))
+        .where(table.pair == "BTC-USDT")
+        .where(table.best_bid_price > 50000)
+        .where(table.timestamp_ms >= datetime(2025, 12, 20, 0, 0, 0))
         .limit(3)
         .to_list())
-    print(f"   Found {len(result)} results using table.columns")
+    print(f"   Found {len(result)} results using direct column access")
 
 
 def example_20_time_range(table):
@@ -1406,7 +1406,7 @@ def example_65_format_functions(table):
 
 EXAMPLES = {
     1: ("Basic query using column objects", example_1_basic_query),
-    2: ("Using table.c shortcut for columns", example_2_table_shortcut),
+    2: ("Direct column access from table instance", example_2_direct_column_access),
     3: ("Complex expressions with AND/OR operators", example_3_complex_expressions),
     4: ("Multiple where conditions (chained)", example_4_multiple_where),
     5: ("Selecting specific columns using column objects", example_5_column_select),
@@ -1423,7 +1423,7 @@ EXAMPLES = {
     16: ("Using NOT IN operator", example_16_not_in),
     17: ("Using LIKE operator", example_17_like),
     18: ("Complex OR expression", example_18_or_expression),
-    19: ("Using table.columns for column access", example_19_table_columns),
+    19: ("Direct column access from table instance", example_19_direct_column_access),
     20: ("Time range queries with datetime objects", example_20_time_range),
     21: ("Multiple aggregations in select", example_21_multiple_aggregations),
     22: ("Using exchange and pair helper methods", example_22_helpers),

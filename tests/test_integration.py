@@ -122,8 +122,8 @@ class TestIntegration:
     def test_query_with_table_shortcut(self, table, mock_client):
         """Test query using table.c shortcut."""
         result = (table.query()
-            .where(table.c.pair == "BTC-USDT")
-            .where(table.c.best_bid_price > 50000)
+            .where(table.pair == "BTC-USDT")
+            .where(table.best_bid_price > 50000)
             .limit(5)
             .to_list())
         

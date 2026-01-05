@@ -7,8 +7,7 @@ from unittest.mock import Mock, MagicMock
 from datetime import datetime
 from chpy.client import ClickHouseClient
 from chpy.orm import Column, Table
-from chpy.schema import crypto_quotes
-from chpy.tables import CryptoQuotesTable
+from chpy.tables import CryptoQuotesTable, crypto_quotes
 from chpy.types import String, Float64, Float32, UInt64, UInt32, UInt16, UInt8, Int64, Int32, Int16, Int8, Bool
 
 

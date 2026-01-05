@@ -3,9 +3,8 @@ chpy - A Python wrapper for ClickHouse database operations.
 """
 
 from chpy.client import ClickHouseClient
-from chpy.tables import CryptoQuotesTable, TableWrapper
+from chpy.tables import CryptoQuotesTable, TableWrapper, crypto_quotes, crypto_quotes_columns
 from chpy.query_builder import QueryBuilder
-from chpy.schema import crypto_quotes
 from chpy.ddl import DDL
 from chpy.types import (
     TypeBuilder,

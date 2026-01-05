@@ -74,7 +74,7 @@ class QueryBuilder:
                 if isinstance(col, Column):
                     # Use table-qualified name if table is available, or qualify with base table if JOINs exist
                     if col.table:
-                        column_strings.append(f"{col.table.full_name}.{col.name}")
+                        column_strings.append(f"{col.table._qualified_name}.{col.name}")
                     elif self._joins:
                         # Auto-qualify base table columns when JOINs are present
                         column_strings.append(f"{self.table_name}.{col.name}")
@@ -86,7 +86,7 @@ class QueryBuilder:
                     # Subquery in SELECT (scalar subquery)
                     column_strings.append(col.to_sql())
                 elif isinstance(col, str):
-                    # Raw string for backward compatibility
+                    # Raw string support
                     column_strings.append(col)
                 else:
                     raise TypeError(f"Unsupported column type: {type(col)}. "
@@ -246,7 +246,7 @@ class QueryBuilder:
         """
         # Determine table name
         if isinstance(table, Table):
-            table_name = table.full_name
+            table_name = table.qualified_name
         elif isinstance(table, str):
             table_name = table
         else:

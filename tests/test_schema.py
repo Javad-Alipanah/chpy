@@ -1,9 +1,9 @@
 """
-Tests for chpy.schema module.
+Tests for crypto_quotes schema (now exported from chpy.tables).
 """
 
 import pytest
-from chpy.schema import crypto_quotes, crypto_quotes_columns
+from chpy.tables import crypto_quotes, crypto_quotes_columns
 from chpy.orm import Column, Table
 
 
@@ -22,9 +22,15 @@ class TestSchema:
     def test_crypto_quotes_table(self):
         """Test crypto_quotes table instance."""
         assert isinstance(crypto_quotes, Table)
-        assert crypto_quotes.name == "crypto_quotes"
+        # crypto_quotes is a Table wrapper instance
+        # The wrapper's table_name property returns the full qualified name
+        assert crypto_quotes.table_name == "stockhouse.crypto_quotes"
         assert crypto_quotes.database == "stockhouse"
-        assert crypto_quotes.full_name == "stockhouse.crypto_quotes"
+        # The schema is self (Table wrapper), so it has the same properties
+        # Access base Table properties via the schema's base class attributes
+        assert crypto_quotes.schema._table_name == "crypto_quotes"
+        assert crypto_quotes.schema._db_name == "stockhouse"
+        assert crypto_quotes.schema._qualified_name == "stockhouse.crypto_quotes"
     
     def test_crypto_quotes_columns_exist(self):
         """Test that expected columns exist in crypto_quotes table."""

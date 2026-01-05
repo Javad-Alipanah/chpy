@@ -67,7 +67,7 @@ class DDL:
         Args:
             table: Table object or table name (if string, requires columns parameter)
             columns: List of Column objects (required if table is a string)
-            database: Database name (required if table is a string, otherwise uses table.database)
+            database: Database name (required if table is a string, otherwise uses table.db_name)
             engine: Table engine (default: "MergeTree")
             order_by: Column(s) to order by (required for MergeTree)
             partition_by: Column(s) to partition by
@@ -86,12 +86,12 @@ class DDL:
         """
         # Determine table name and columns
         if isinstance(table, Table):
-            # Use full_name and split to avoid issues if a column is named "name"
-            full_name = table.full_name
+            # Use qualified_name and split to avoid issues if a column is named "name"
+            full_name = table.qualified_name
             if '.' in full_name:
                 database, table_name = full_name.split('.', 1)
             else:
-                database = table.database
+                database = table.db_name
                 table_name = full_name
             columns = table.get_all_columns()
         elif isinstance(table, str):
@@ -171,7 +171,7 @@ class DDL:
         """
         # Determine table name
         if isinstance(table, Table):
-            full_table_name = table.full_name
+            full_table_name = table.qualified_name
         elif isinstance(table, str):
             if '.' in table:
                 full_table_name = table
@@ -214,7 +214,7 @@ class DDL:
         """
         # Determine table name
         if isinstance(table, Table):
-            full_table_name = table.full_name
+            full_table_name = table.qualified_name
         elif isinstance(table, str):
             if '.' in table:
                 full_table_name = table
@@ -252,7 +252,7 @@ class DDL:
         """
         # Determine table name
         if isinstance(table, Table):
-            full_table_name = table.full_name
+            full_table_name = table.qualified_name
         elif isinstance(table, str):
             if '.' in table:
                 full_table_name = table
@@ -290,7 +290,7 @@ class DDL:
         """
         # Determine table name
         if isinstance(table, Table):
-            full_table_name = table.full_name
+            full_table_name = table.qualified_name
         elif isinstance(table, str):
             if '.' in table:
                 full_table_name = table
@@ -324,8 +324,8 @@ class DDL:
         """
         # Determine table name
         if isinstance(old_table, Table):
-            full_table_name = old_table.full_name
-            database = old_table.database
+            full_table_name = old_table.qualified_name
+            database = old_table.db_name
         elif isinstance(old_table, str):
             if '.' in old_table:
                 full_table_name = old_table
@@ -448,11 +448,11 @@ class DDL:
         """
         # Determine view name
         if isinstance(view, Table):
-            full_view_name = view.full_name
+            full_view_name = view.qualified_name
             if '.' in full_view_name:
                 database, view_name = full_view_name.split('.', 1)
             else:
-                database = view.database
+                database = view.db_name
                 view_name = full_view_name
         elif isinstance(view, str):
             if '.' in view:
@@ -468,11 +468,11 @@ class DDL:
         
         # Determine target table name
         if isinstance(to_table, Table):
-            full_to_name = to_table.full_name
+            full_to_name = to_table.qualified_name
             if '.' in full_to_name:
                 to_database, to_table_name = full_to_name.split('.', 1)
             else:
-                to_database = to_table.database
+                to_database = to_table.db_name
                 to_table_name = full_to_name
             columns = to_table.get_all_columns()
         elif isinstance(to_table, str):
@@ -558,7 +558,7 @@ class DDL:
         """
         # Determine view name
         if isinstance(view, Table):
-            full_view_name = view.full_name
+            full_view_name = view.qualified_name
         elif isinstance(view, str):
             if '.' in view:
                 full_view_name = view
@@ -614,11 +614,11 @@ class DDL:
         """
         # Determine distributed table name
         if isinstance(table, Table):
-            full_name = table.full_name
+            full_name = table.qualified_name
             if '.' in full_name:
                 database, table_name = full_name.split('.', 1)
             else:
-                database = table.database
+                database = table.db_name
                 table_name = full_name
             columns = table.get_all_columns()
         elif isinstance(table, str):
@@ -632,7 +632,7 @@ class DDL:
         
         # Determine local table name
         if isinstance(local_table, Table):
-            local_full_name = local_table.full_name
+            local_full_name = local_table.qualified_name
         elif isinstance(local_table, str):
             if '.' in local_table:
                 local_full_name = local_table

@@ -4,10 +4,10 @@ Tests for chpy.tables module.
 
 import pytest
 from unittest.mock import Mock
-from chpy.tables import CryptoQuotesTable, TableWrapper
+from chpy.tables import CryptoQuotesTable, TableWrapper, Table
 from chpy.client import ClickHouseClient
-from chpy.orm import Column, Table, Row
-from chpy.schema import crypto_quotes
+from chpy.orm import Column, Row
+from chpy.tables import crypto_quotes
 from chpy.types import String, Float64, Float32, UInt64, UInt32, UInt16, UInt8, Int64, Int32, Int16, Int8, Bool
 
 
@@ -45,10 +45,12 @@ class TestCryptoQuotesTable:
     
     def test_column_shortcuts(self, table):
         """Test column access shortcuts."""
-        assert table.c == crypto_quotes
-        assert table.columns == crypto_quotes
-        assert table.c.pair.name == "pair"
-        assert table.columns.best_bid_price.name == "best_bid_price"
+        # Direct column access (Django-style)
+        assert table.pair.name == "pair"
+        assert table.best_bid_price.name == "best_bid_price"
+        # Verify columns are accessible
+        assert table.pair == crypto_quotes.pair
+        assert table.best_bid_price == crypto_quotes.best_bid_price
     
     def test_escape_string(self, table):
         """Test string escaping."""
@@ -184,38 +186,47 @@ class TestTableWrapper:
         client.database = "test_db"
         return client
     
-    def test_init_without_schema(self, mock_client):
-        """Test initialization without schema."""
-        table = TableWrapper(mock_client, "my_table", "test_db")
+    def test_init_with_django_style_columns(self, mock_client):
+        """Test initialization with Django-style column definitions."""
+        class MyTable(Table):
+            id = Column("id", UInt64)
+            name = Column("name", String)
+            value = Column("value", Float64)
+        
+        table = MyTable(mock_client, "my_table", "test_db")
         assert table.client == mock_client
         assert table.database == "test_db"
         assert table.table_name == "test_db.my_table"
-        assert table.schema is None
-        assert table.c is None
-        assert table.columns is None
+        assert table.schema == table  # Table is its own schema
+        # Direct column access (Django-style)
+        assert table.id.name == "id"
+        assert table.name.name == "name"
+        assert table.value.name == "value"
     
-    def test_init_with_schema(self, mock_client):
-        """Test initialization with schema."""
+    def test_init_with_explicit_columns(self, mock_client):
+        """Test initialization with explicit columns parameter."""
         columns = [
             Column("id", UInt64),
             Column("name", String),
             Column("value", Float64),
         ]
-        schema = Table("my_table", "test_db", columns)
         
-        table = TableWrapper(mock_client, "my_table", "test_db", schema=schema)
+        table = TableWrapper(mock_client, "my_table", "test_db", columns=columns)
         assert table.client == mock_client
         assert table.database == "test_db"
         assert table.table_name == "test_db.my_table"
-        assert table.schema == schema
-        assert table.c == schema
-        assert table.columns == schema
-        assert table.c.id.name == "id"
-        assert table.columns.name.name == "name"
+        assert table.schema == table  # Table is its own schema
+        # Direct column access
+        assert table.id.name == "id"
+        assert table.name.name == "name"
+        assert table.value.name == "value"
     
     def test_escape_string(self, mock_client):
         """Test string escaping."""
-        table = TableWrapper(mock_client, "my_table", "test_db")
+        class MyTable(Table):
+            id = Column("id", UInt64)
+        
+        table = MyTable(mock_client, "my_table", "test_db")
         result = table._escape_string("O'Brien")
         assert result == "O''Brien"
         
@@ -224,7 +235,12 @@ class TestTableWrapper:
     
     def test_insert(self, mock_client):
         """Test insert method."""
-        table = TableWrapper(mock_client, "my_table", "test_db")
+        class MyTable(Table):
+            id = Column("id", UInt64)
+            name = Column("name", String)
+            value = Column("value", Float64)
+        
+        table = MyTable(mock_client, "my_table", "test_db")
         data = [
             {"id": 1, "name": "test1", "value": 1.5},
             {"id": 2, "name": "test2", "value": 2.5},
@@ -238,33 +254,37 @@ class TestTableWrapper:
         """Test query method returns QueryBuilder."""
         from chpy.query_builder import QueryBuilder
         
-        table = TableWrapper(mock_client, "my_table", "test_db")
+        class MyTable(Table):
+            id = Column("id", UInt64)
+        
+        table = MyTable(mock_client, "my_table", "test_db")
         builder = table.query()
         
         assert isinstance(builder, QueryBuilder)
         assert builder.table_name == "test_db.my_table"
     
-    def test_query_with_schema(self, mock_client):
-        """Test query with schema for type-safe column access."""
+    def test_query_with_django_style_columns(self, mock_client):
+        """Test query with Django-style column definitions."""
         from chpy.query_builder import QueryBuilder
         
-        columns = [
-            Column("id", UInt64),
-            Column("name", String),
-        ]
-        schema = Table("my_table", "test_db", columns)
-        table = TableWrapper(mock_client, "my_table", "test_db", schema=schema)
+        class MyTable(Table):
+            id = Column("id", UInt64)
+            name = Column("name", String)
         
+        table = MyTable(mock_client, "my_table", "test_db")
         builder = table.query()
         assert isinstance(builder, QueryBuilder)
         
-        # Can use schema columns in queries
-        query = builder.where(schema.id > 100)._build_query()
+        # Can use table columns directly in queries
+        query = builder.where(table.id > 100)._build_query()
         assert "id > 100" in query
     
-    def test_query_without_schema(self, mock_client):
-        """Test query without schema (using raw strings)."""
-        table = TableWrapper(mock_client, "my_table", "test_db")
+    def test_query_with_raw_strings(self, mock_client):
+        """Test query with raw SQL strings."""
+        class MyTable(Table):
+            id = Column("id", UInt64)
+        
+        table = MyTable(mock_client, "my_table", "test_db")
         builder = table.query()
         
         # Can still use raw SQL strings
@@ -278,31 +298,36 @@ class TestTableWrapper:
         assert isinstance(crypto_table, TableWrapper)
         assert crypto_table.table_name == "stockhouse.crypto_quotes"
         assert crypto_table.schema is not None
-        assert crypto_table.c is not None
-        assert crypto_table.columns is not None
+        # With Django-style columns, columns are directly accessible (no need for .c)
+        assert crypto_table.pair is not None
+        assert crypto_table.best_bid_price is not None
     
     def test_multiple_table_wrappers(self, mock_client):
         """Test creating multiple table wrappers for different tables."""
-        # Create schema for first table
-        columns1 = [Column("id", UInt64), Column("name", String)]
-        schema1 = Table("table1", "test_db", columns1)
-        table1 = TableWrapper(mock_client, "table1", "test_db", schema=schema1)
+        class Table1(Table):
+            id = Column("id", UInt64)
+            name = Column("name", String)
         
-        # Create schema for second table
-        columns2 = [Column("user_id", UInt64), Column("email", String)]
-        schema2 = Table("table2", "test_db", columns2)
-        table2 = TableWrapper(mock_client, "table2", "test_db", schema=schema2)
+        class Table2(Table):
+            user_id = Column("user_id", UInt64)
+            email = Column("email", String)
+        
+        table1 = Table1(mock_client, "table1", "test_db")
+        table2 = Table2(mock_client, "table2", "test_db")
         
         assert table1.table_name == "test_db.table1"
         assert table2.table_name == "test_db.table2"
-        assert table1.c.id.name == "id"
-        assert table2.c.user_id.name == "user_id"
-        assert table1.c != table2.c
+        assert table1.id.name == "id"
+        assert table2.user_id.name == "user_id"
+        assert table1 != table2
     
     def test_table_wrapper_with_different_databases(self, mock_client):
         """Test table wrappers with different databases."""
-        table1 = TableWrapper(mock_client, "my_table", "db1")
-        table2 = TableWrapper(mock_client, "my_table", "db2")
+        class MyTable(Table):
+            id = Column("id", UInt64)
+        
+        table1 = MyTable(mock_client, "my_table", "db1")
+        table2 = MyTable(mock_client, "my_table", "db2")
         
         assert table1.table_name == "db1.my_table"
         assert table2.table_name == "db2.my_table"
@@ -311,19 +336,17 @@ class TestTableWrapper:
     
     def test_query_returns_row_objects_with_schema(self, mock_client):
         """Test that query returns Row objects when schema is available."""
-        columns = [
-            Column("id", UInt64),
-            Column("name", String),
-            Column("value", Float64),
-        ]
-        schema = Table("my_table", "test_db", columns)
+        class MyTable(Table):
+            id = Column("id", UInt64)
+            name = Column("name", String)
+            value = Column("value", Float64)
         
         mock_client.execute.return_value = [
             {"id": 1, "name": "test1", "value": 1.5},
             {"id": 2, "name": "test2", "value": 2.5},
         ]
         
-        table = TableWrapper(mock_client, "my_table", "test_db", schema=schema)
+        table = MyTable(mock_client, "my_table", "test_db")
         results = table.query().to_list()
         
         # Should return Row objects
@@ -336,38 +359,18 @@ class TestTableWrapper:
         assert results[0].name == "test1"
         assert results[0].value == 1.5
     
-    def test_query_returns_dict_objects_without_schema(self, mock_client):
-        """Test that query returns dict objects when no schema (backward compatible)."""
-        mock_client.execute.return_value = [
-            {"id": 1, "name": "test1"},
-            {"id": 2, "name": "test2"},
-        ]
-        
-        table = TableWrapper(mock_client, "my_table", "test_db")
-        results = table.query().to_list()
-        
-        # Should return dict objects (not Row objects)
-        assert len(results) == 2
-        assert isinstance(results[0], dict)
-        assert isinstance(results[1], dict)
-        assert not isinstance(results[0], Row)
-        assert not isinstance(results[1], Row)
-        
-        # Test dictionary access
-        assert results[0]["id"] == 1
-        assert results[1]["name"] == "test2"
-    
     def test_iteration_returns_row_objects_with_schema(self, mock_client):
         """Test that iteration over query returns Row objects when schema is available."""
-        columns = [Column("id", UInt64), Column("name", String)]
-        schema = Table("my_table", "test_db", columns)
+        class MyTable(Table):
+            id = Column("id", UInt64)
+            name = Column("name", String)
         
         mock_client.execute.return_value = [
             {"id": 1, "name": "test1"},
             {"id": 2, "name": "test2"},
         ]
         
-        table = TableWrapper(mock_client, "my_table", "test_db", schema=schema)
+        table = MyTable(mock_client, "my_table", "test_db")
         
         rows = list(table.query())
         
@@ -377,49 +380,40 @@ class TestTableWrapper:
         assert rows[1].id == 2
         assert rows[0].name == "test1"
     
-    def test_iteration_returns_dict_objects_without_schema(self, mock_client):
-        """Test that iteration returns dict objects when no schema."""
+    def test_iteration_returns_row_objects(self, mock_client):
+        """Test that iteration returns Row objects when table has columns."""
+        class MyTable(Table):
+            id = Column("id", UInt64)
+            name = Column("name", String)
+        
         mock_client.execute.return_value = [
             {"id": 1, "name": "test1"},
         ]
         
-        table = TableWrapper(mock_client, "my_table", "test_db")
+        table = MyTable(mock_client, "my_table", "test_db")
         
         rows = list(table.query())
         
         assert len(rows) == 1
-        assert isinstance(rows[0], dict)
-        assert not isinstance(rows[0], Row)
-        assert rows[0]["id"] == 1
+        assert isinstance(rows[0], Row)
+        assert rows[0].id == 1
     
     def test_first_returns_row_object_with_schema(self, mock_client):
         """Test that first() returns Row object when schema is available."""
-        columns = [Column("id", UInt64), Column("name", String)]
-        schema = Table("my_table", "test_db", columns)
+        class MyTable(Table):
+            id = Column("id", UInt64)
+            name = Column("name", String)
         
         mock_client.execute.return_value = [
             {"id": 1, "name": "test1"},
         ]
         
-        table = TableWrapper(mock_client, "my_table", "test_db", schema=schema)
+        table = MyTable(mock_client, "my_table", "test_db")
         result = table.query().first()
         
         assert isinstance(result, Row)
         assert result.id == 1
         assert result.name == "test1"
-    
-    def test_first_returns_dict_without_schema(self, mock_client):
-        """Test that first() returns dict when no schema."""
-        mock_client.execute.return_value = [
-            {"id": 1, "name": "test1"},
-        ]
-        
-        table = TableWrapper(mock_client, "my_table", "test_db")
-        result = table.query().first()
-        
-        assert isinstance(result, dict)
-        assert not isinstance(result, Row)
-        assert result["id"] == 1
     
     def test_crypto_quotes_returns_row_objects(self, mock_client):
         """Test that CryptoQuotesTable returns Row objects (has schema)."""
@@ -450,12 +444,10 @@ class TestTableWrapper:
     
     def test_row_object_programmatic_iteration(self, mock_client):
         """Test programmatic iteration over Row objects."""
-        columns = [
-            Column("id", UInt64),
-            Column("name", String),
-            Column("value", Float64),
-        ]
-        schema = Table("my_table", "test_db", columns)
+        class MyTable(Table):
+            id = Column("id", UInt64)
+            name = Column("name", String)
+            value = Column("value", Float64)
         
         mock_client.execute.return_value = [
             {"id": 1, "name": "test1", "value": 1.5},
@@ -463,7 +455,7 @@ class TestTableWrapper:
             {"id": 3, "name": "test3", "value": 3.5},
         ]
         
-        table = TableWrapper(mock_client, "my_table", "test_db", schema=schema)
+        table = MyTable(mock_client, "my_table", "test_db")
         
         # Test iteration
         ids = []
@@ -487,14 +479,15 @@ class TestTableWrapper:
     
     def test_row_object_to_dict_conversion(self, mock_client):
         """Test converting Row objects to dictionaries."""
-        columns = [Column("id", UInt64), Column("name", String)]
-        schema = Table("my_table", "test_db", columns)
+        class MyTable(Table):
+            id = Column("id", UInt64)
+            name = Column("name", String)
         
         mock_client.execute.return_value = [
             {"id": 1, "name": "test1"},
         ]
         
-        table = TableWrapper(mock_client, "my_table", "test_db", schema=schema)
+        table = MyTable(mock_client, "my_table", "test_db")
         row = table.query().first()
         
         # Convert to dict

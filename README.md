@@ -69,57 +69,8 @@ pip install -e .
 ### Basic Connection
 
 ```python
-from typing import Optional, List
-from chpy import ClickHouseClient, Array, LowCardinality, String, Float64, UInt64
-from chpy.tables import TableWrapper
-from chpy.orm import Table, Column
-
-# Define crypto_quotes table schema
-crypto_quotes_columns = [
-    Column("pair", String),
-    Column("best_bid_price", Float64),
-    Column("best_bid_size", Float64),
-    Column("best_ask_price", Float64),
-    Column("best_ask_size", Float64),
-    Column("bid_prices", Array(Float64)),
-    Column("bid_sizes", Array(Float64)),
-    Column("ask_prices", Array(Float64)),
-    Column("ask_sizes", Array(Float64)),
-    Column("timestamp_ms", UInt64),
-    Column("exchange", LowCardinality(String)),
-    Column("sequence_number", UInt64),
-    Column("inserted_at", UInt64),
-]
-
-# Create table instance
-crypto_quotes = Table("crypto_quotes", "stockhouse", crypto_quotes_columns)
-crypto_quotes_schema = crypto_quotes  # Alias for clarity when used as schema parameter
-
-# CryptoQuotesTable definition
-class CryptoQuotesTable(TableWrapper):
-    """
-    Programmatic wrapper for the crypto_quotes table.
-    
-    Provides a high-level interface to query crypto quotes data
-    without writing SQL directly. Inherits from TableWrapper for
-    generic table functionality.
-    """
-    
-    def __init__(self, client: ClickHouseClient, database: str = "stockhouse"):
-        """
-        Initialize CryptoQuotesTable wrapper.
-        
-        Args:
-            client: ClickHouseClient instance
-            database: Database name (default: 'stockhouse')
-        """
-        # Initialize base class with crypto_quotes table and schema
-        super().__init__(
-            client=client,
-            table_name="crypto_quotes",
-            database=database,
-            schema=crypto_quotes_schema
-        )
+from chpy import ClickHouseClient
+from chpy.tables import CryptoQuotesTable
 
 # Initialize the client
 client = ClickHouseClient(
@@ -130,26 +81,51 @@ client = ClickHouseClient(
     database="stockhouse"
 )
 
-# Create a table wrapper
+# Create a table instance (CryptoQuotesTable already has columns defined)
 table = CryptoQuotesTable(client)
 
-# Simple query
+# Simple query with direct column access (Django-style)
 df = (table.query()
-    .where(table.c.pair == "BTC-USDT")
+    .where(table.pair == "BTC-USDT")
     .limit(10)
     .to_dataframe())
 
 print(df)
 ```
 
+### Defining Custom Tables
+
+```python
+from chpy import ClickHouseClient
+from chpy.tables import Table
+from chpy.orm import Column
+from chpy.types import String, UInt64, Float64
+
+# Define a custom table with Django-style column definitions
+class MyTable(Table):
+    id = Column("id", UInt64)
+    name = Column("name", String)
+    value = Column("value", Float64)
+
+# Initialize the client
+client = ClickHouseClient(host="localhost", database="my_db")
+
+# Create table instance
+table = MyTable(client, "my_table", "my_db")
+
+# Query with direct column access
+df = (table.query()
+    .where(table.id > 100)
+    .where(table.name == "test")
+    .to_dataframe())
+```
+
 ### Using Context Manager
 
 ```python
-# CryptoQuotesTable is defined above (see Basic Connection section)
-
 with ClickHouseClient(host="localhost", database="stockhouse") as client:
     table = CryptoQuotesTable(client)
-    results = table.query().where(table.c.pair == "BTC-USDT").to_list()
+    results = table.query().where(table.pair == "BTC-USDT").to_list()
     # Connection automatically closed
 ```
 
@@ -192,26 +168,34 @@ with ClickHouseClient(...) as client:
     pass  # Connection automatically closed
 ```
 
-### TableWrapper
+### TableWrapper / Table
 
-Generic wrapper for any ClickHouse table.
+Generic wrapper for any ClickHouse table. Columns are defined as class attributes (Django-style).
 
 #### Initialization
 
 ```python
-table = TableWrapper(
-    client=client,
-    table_name="my_table",
-    database="my_db",
-    schema=optional_table_schema  # Optional Table object for type safety
-)
+# Define table with Django-style columns
+class MyTable(Table):
+    id = Column("id", UInt64)
+    name = Column("name", String)
+
+# Create instance
+table = MyTable(client, "my_table", "my_db")
+
+# Or use explicit columns parameter
+from chpy.tables import TableWrapper
+from chpy.orm import Column
+
+columns = [Column("id", UInt64), Column("name", String)]
+table = TableWrapper(client, "my_table", "my_db", columns=columns)
 ```
 
 #### Methods
 
 - `query()` - Start building a query, returns QueryBuilder
 - `insert(data)` - Insert data into the table
-- `c` or `columns` - Access to schema columns (if schema provided)
+- Direct column access - Access columns directly as attributes (e.g., `table.id`, `table.name`)
 
 ### CryptoQuotesTable
 
@@ -375,12 +359,12 @@ WindowSpec()
 
 ## Best Practices
 
-### 1. Use Schema Objects for Type Safety
+### 1. Use Direct Column Access for Type Safety
 
 ```python
-# Good: Type-safe with autocomplete
+# Good: Type-safe with autocomplete (Django-style)
 df = (table.query()
-    .where(crypto_quotes.pair == "BTC-USDT")
+    .where(table.pair == "BTC-USDT")
     .to_dataframe())
 
 # Avoid: Raw strings (no type checking)
@@ -394,16 +378,16 @@ df = (table.query()
 ```python
 # Good: Fluent interface
 results = (table.query()
-    .where(crypto_quotes.pair == "BTC-USDT")
-    .where(crypto_quotes.exchange == "BINANCE")
-    .order_by(crypto_quotes.timestamp_ms, desc=True)
+    .where(table.pair == "BTC-USDT")
+    .where(table.exchange == "BINANCE")
+    .order_by(table.timestamp_ms, desc=True)
     .limit(100)
     .to_list())
 
 # Avoid: Multiple variables
 builder = table.query()
-builder = builder.where(crypto_quotes.pair == "BTC-USDT")
-builder = builder.where(crypto_quotes.exchange == "BINANCE")
+builder = builder.where(table.pair == "BTC-USDT")
+builder = builder.where(table.exchange == "BINANCE")
 results = builder.to_list()
 ```
 
@@ -429,7 +413,7 @@ finally:
 ```python
 # Good: Select specific columns
 df = (table.query()
-    .select(crypto_quotes.pair, crypto_quotes.best_bid_price)
+    .select(table.pair, table.best_bid_price)
     .to_dataframe())
 
 # Avoid: Selecting all columns when you only need a few
@@ -460,8 +444,8 @@ table.query().to_parquet("output.parquet")
 # Good: Use library functions
 results = (table.query()
     .select(
-        upper(crypto_quotes.pair).alias("pair_upper"),
-        round(crypto_quotes.best_bid_price, 2).alias("rounded_price")
+        upper(table.pair).alias("pair_upper"),
+        round(table.best_bid_price, 2).alias("rounded_price")
     )
     .to_list())
 
@@ -477,10 +461,10 @@ results = (table.query()
 # Good: Window functions for running calculations
 result = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.best_bid_price,
-        avg(crypto_quotes.best_bid_price).over(
-            WindowSpec().partition_by(crypto_quotes.pair)
+        table.pair,
+        table.best_bid_price,
+        avg(table.best_bid_price).over(
+            WindowSpec().partition_by(table.pair)
         ).alias("avg_price")
     )
     .to_dataframe())
@@ -525,47 +509,47 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 For issues, questions, or contributions, please open an issue on GitHub.
 ## Basic Examples
 
-### Example 1: Simple Query with Column Objects
+### Example 1: Simple Query with Direct Column Access
 
 ```python
 from chpy import ClickHouseClient
-# crypto_quotes schema and CryptoQuotesTable are defined above (see Quick Start section)
+from chpy.tables import CryptoQuotesTable
 from datetime import datetime, timedelta
 
 client = ClickHouseClient(host="localhost", database="stockhouse")
 table = CryptoQuotesTable(client)
 
-# Query using column objects (type-safe with autocomplete)
+# Query using direct column access (Django-style, type-safe with autocomplete)
 df = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.best_bid_price,
-        crypto_quotes.best_ask_price,
-        crypto_quotes.timestamp_ms
+        table.pair,
+        table.best_bid_price,
+        table.best_ask_price,
+        table.timestamp_ms
     )
-    .where(crypto_quotes.pair == "BTC-USDT")
-    .where(crypto_quotes.exchange == "BINANCE")
-    .where(crypto_quotes.timestamp_ms >= datetime.now() - timedelta(days=1))
-    .order_by(crypto_quotes.timestamp_ms, desc=True)
+    .where(table.pair == "BTC-USDT")
+    .where(table.exchange == "BINANCE")
+    .where(table.timestamp_ms >= datetime.now() - timedelta(days=1))
+    .order_by(table.timestamp_ms, desc=True)
     .limit(100)
     .to_dataframe())
 
 print(df.head())
 ```
 
-### Example 2: Using Table Shortcuts
+### Example 2: Direct Column Access (Django-style)
 
 ```python
-# Use table.c or table.columns for column access
+# Access columns directly as attributes
 results = (table.query()
-    .where(table.c.pair == "BTC-USDT")
-    .where(table.c.best_bid_price > 50000)
-    .order_by(table.c.timestamp_ms, desc=True)
+    .where(table.pair == "BTC-USDT")
+    .where(table.best_bid_price > 50000)
+    .order_by(table.timestamp_ms, desc=True)
     .limit(5)
     .to_list())
 
 for row in results:
-    print(f"Pair: {row['pair']}, Bid: {row['best_bid_price']}")
+    print(f"Pair: {row.pair}, Bid: {row.best_bid_price}")
 ```
 
 ### Example 3: Comparison Operators
@@ -573,11 +557,11 @@ for row in results:
 ```python
 # All comparison operators are supported
 results = (table.query()
-    .where(crypto_quotes.best_bid_price > 50000)
-    .where(crypto_quotes.best_bid_price < 60000)
-    .where(crypto_quotes.best_bid_price >= 51000)
-    .where(crypto_quotes.best_bid_price <= 59000)
-    .where(crypto_quotes.pair != "ETH-USDT")
+    .where(table.best_bid_price > 50000)
+    .where(table.best_bid_price < 60000)
+    .where(table.best_bid_price >= 51000)
+    .where(table.best_bid_price <= 59000)
+    .where(table.pair != "ETH-USDT")
     .limit(10)
     .to_list())
 ```
@@ -587,13 +571,13 @@ results = (table.query()
 ```python
 # IN operator for multiple values
 results = (table.query()
-    .where(crypto_quotes.pair.in_(["BTC-USDT", "ETH-USDT", "BNB-USDT"]))
-    .where(crypto_quotes.exchange == "BINANCE")
+    .where(table.pair.in_(["BTC-USDT", "ETH-USDT", "BNB-USDT"]))
+    .where(table.exchange == "BINANCE")
     .to_list())
 
 # NOT IN operator
 results = (table.query()
-    .where(crypto_quotes.exchange.not_in(["BINANCE", "KUCOIN"]))
+    .where(table.exchange.not_in(["BINANCE", "KUCOIN"]))
     .limit(10)
     .to_list())
 ```
@@ -603,7 +587,7 @@ results = (table.query()
 ```python
 # Pattern matching with LIKE
 results = (table.query()
-    .where(crypto_quotes.pair.like("BTC-%"))
+    .where(table.pair.like("BTC-%"))
     .limit(10)
     .to_list())
 ```
@@ -614,9 +598,9 @@ results = (table.query()
 # Combine conditions with & (AND) and | (OR)
 results = (table.query()
     .where(
-        (crypto_quotes.pair == "BTC-USDT") & 
-        (crypto_quotes.exchange.in_(["BINANCE", "KUCOIN"])) &
-        (crypto_quotes.timestamp_ms >= datetime.now() - timedelta(days=1))
+        (table.pair == "BTC-USDT") & 
+        (table.exchange.in_(["BINANCE", "KUCOIN"])) &
+        (table.timestamp_ms >= datetime.now() - timedelta(days=1))
     )
     .limit(10)
     .to_list())
@@ -624,10 +608,10 @@ results = (table.query()
 # OR expression
 results = (table.query()
     .where(
-        (crypto_quotes.pair == "BTC-USDT") | 
-        (crypto_quotes.pair == "ETH-USDT")
+        (table.pair == "BTC-USDT") | 
+        (table.pair == "ETH-USDT")
     )
-    .where(crypto_quotes.exchange == "BINANCE")
+    .where(table.exchange == "BINANCE")
     .limit(10)
     .to_list())
 ```
@@ -637,10 +621,10 @@ results = (table.query()
 ```python
 # Multiple where() calls are combined with AND
 results = (table.query()
-    .where(crypto_quotes.pair == "BTC-USDT")
-    .where(crypto_quotes.exchange == "BINANCE")
-    .where(crypto_quotes.best_bid_price > 50000)
-    .where(crypto_quotes.best_ask_price < 60000)
+    .where(table.pair == "BTC-USDT")
+    .where(table.exchange == "BINANCE")
+    .where(table.best_bid_price > 50000)
+    .where(table.best_ask_price < 60000)
     .limit(5)
     .to_list())
 ```
@@ -651,13 +635,13 @@ results = (table.query()
 # Select only the columns you need
 df = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.best_bid_price,
-        crypto_quotes.best_ask_price,
-        crypto_quotes.exchange,
-        crypto_quotes.timestamp_ms
+        table.pair,
+        table.best_bid_price,
+        table.best_ask_price,
+        table.exchange,
+        table.timestamp_ms
     )
-    .where(crypto_quotes.pair == "BTC-USDT")
+    .where(table.pair == "BTC-USDT")
     .limit(10)
     .to_dataframe())
 
@@ -669,9 +653,9 @@ print(df.columns)  # Only selected columns
 ```python
 # Order by one or more columns
 results = (table.query()
-    .where(crypto_quotes.pair == "BTC-USDT")
-    .order_by(crypto_quotes.exchange, desc=False)  # ASC
-    .order_by(crypto_quotes.timestamp_ms, desc=True)  # DESC
+    .where(table.pair == "BTC-USDT")
+    .order_by(table.exchange, desc=False)  # ASC
+    .order_by(table.timestamp_ms, desc=True)  # DESC
     .limit(10)
     .to_list())
 ```
@@ -681,9 +665,9 @@ results = (table.query()
 ```python
 # Count rows matching conditions
 count = (table.query()
-    .where(crypto_quotes.pair == "BTC-USDT")
-    .where(crypto_quotes.exchange == "BINANCE")
-    .where(crypto_quotes.timestamp_ms >= datetime.now() - timedelta(days=1))
+    .where(table.pair == "BTC-USDT")
+    .where(table.exchange == "BINANCE")
+    .where(table.timestamp_ms >= datetime.now() - timedelta(days=1))
     .count())
 
 print(f"Found {count} rows")
@@ -694,12 +678,12 @@ print(f"Found {count} rows")
 ```python
 # Get the first matching row
 first = (table.query()
-    .where(crypto_quotes.pair == "BTC-USDT")
-    .order_by(crypto_quotes.timestamp_ms, desc=True)
+    .where(table.pair == "BTC-USDT")
+    .order_by(table.timestamp_ms, desc=True)
     .first())
 
 if first:
-    print(f"Latest quote: {first['pair']} @ {first['best_bid_price']}")
+    print(f"Latest quote: {first.pair} @ {first.best_bid_price}")
 ```
 
 ### Example 12: Checking Existence
@@ -707,8 +691,8 @@ if first:
 ```python
 # Check if any rows match
 exists = (table.query()
-    .where(crypto_quotes.pair == "BTC-USDT")
-    .where(crypto_quotes.exchange == "BINANCE")
+    .where(table.pair == "BTC-USDT")
+    .where(table.exchange == "BINANCE")
     .exists())
 
 print(f"Data exists: {exists}")
@@ -718,23 +702,23 @@ print(f"Data exists: {exists}")
 
 ```python
 # Iterate over results (lazy evaluation)
-for row in table.query().where(crypto_quotes.pair == "BTC-USDT").limit(10):
-    print(f"Pair: {row['pair']}, Bid: {row['best_bid_price']}")
+for row in table.query().where(table.pair == "BTC-USDT").limit(10):
+    print(f"Pair: {row.pair}, Bid: {row.best_bid_price}")
 ```
 
 ### Example 14: Output Formats
 
 ```python
 # List of dictionaries
-results = table.query().where(crypto_quotes.pair == "BTC-USDT").to_list()
+results = table.query().where(table.pair == "BTC-USDT").to_list()
 
 # Pandas DataFrame
-df = table.query().where(crypto_quotes.pair == "BTC-USDT").to_dataframe()
+df = table.query().where(table.pair == "BTC-USDT").to_dataframe()
 
 # NumPy array
 arr = table.query().select(
-    crypto_quotes.best_bid_price,
-    crypto_quotes.best_ask_price
+    table.best_bid_price,
+    table.best_ask_price
 ).to_numpy()
 
 # JSON string
@@ -749,8 +733,8 @@ table.query().limit(10000).to_parquet("quotes.parquet")
 
 # Dictionary (key-value mapping)
 pair_dict = (table.query()
-    .select(crypto_quotes.pair, crypto_quotes.best_bid_price)
-    .to_dict(crypto_quotes.pair, crypto_quotes.best_bid_price))
+    .select(table.pair, table.best_bid_price)
+    .to_dict(table.pair, table.best_bid_price))
 ```
 
 ---
@@ -765,15 +749,15 @@ from chpy.functions import avg, count, min, max, sum
 # Group by columns and aggregate
 results = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.exchange,
-        avg(crypto_quotes.best_bid_price).alias("avg_bid"),
-        min(crypto_quotes.best_bid_price).alias("min_bid"),
-        max(crypto_quotes.best_bid_price).alias("max_bid"),
+        table.pair,
+        table.exchange,
+        avg(table.best_bid_price).alias("avg_bid"),
+        min(table.best_bid_price).alias("min_bid"),
+        max(table.best_bid_price).alias("max_bid"),
         count().alias("cnt")
     )
-    .where(crypto_quotes.timestamp_ms >= datetime.now() - timedelta(days=7))
-    .group_by(crypto_quotes.pair, crypto_quotes.exchange)
+    .where(table.timestamp_ms >= datetime.now() - timedelta(days=7))
+    .group_by(table.pair, table.exchange)
     .having("avg_bid > 0")
     .order_by("avg_bid", desc=True)
     .limit(10)
@@ -792,14 +776,14 @@ from chpy.functions import length, upper, lower, substring, concat, startsWith, 
 # Use string functions in SELECT
 results = (table.query()
     .select(
-        crypto_quotes.pair,
-        length(crypto_quotes.pair).alias("pair_length"),
-        upper(crypto_quotes.pair).alias("pair_upper"),
-        lower(crypto_quotes.exchange).alias("exchange_lower"),
-        substring(crypto_quotes.pair, 1, 3).alias("pair_prefix"),
-        concat(crypto_quotes.pair, " on ", crypto_quotes.exchange).alias("description")
+        table.pair,
+        length(table.pair).alias("pair_length"),
+        upper(table.pair).alias("pair_upper"),
+        lower(table.exchange).alias("exchange_lower"),
+        substring(table.pair, 1, 3).alias("pair_prefix"),
+        concat(table.pair, " on ", table.exchange).alias("description")
     )
-    .where(crypto_quotes.pair.in_(["BTC-USDT", "ETH-USDT"]))
+    .where(table.pair.in_(["BTC-USDT", "ETH-USDT"]))
     .limit(5)
     .to_list())
 ```
@@ -812,13 +796,13 @@ from chpy.functions import toYear, toMonth, toDayOfMonth, toHour, toDateTime, di
 # Extract date/time components
 results = (table.query()
     .select(
-        crypto_quotes.timestamp_ms,
-        toYear(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("year"),
-        toMonth(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("month"),
-        toDayOfMonth(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("day"),
-        toHour(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("hour")
+        table.timestamp_ms,
+        toYear(toDateTime(divide(table.timestamp_ms, 1000))).alias("year"),
+        toMonth(toDateTime(divide(table.timestamp_ms, 1000))).alias("month"),
+        toDayOfMonth(toDateTime(divide(table.timestamp_ms, 1000))).alias("day"),
+        toHour(toDateTime(divide(table.timestamp_ms, 1000))).alias("hour")
     )
-    .where(crypto_quotes.pair == "BTC-USDT")
+    .where(table.pair == "BTC-USDT")
     .limit(5)
     .to_list())
 ```
@@ -831,16 +815,16 @@ from chpy.functions import abs, sqrt, round, floor, ceil
 # Mathematical transformations
 results = (table.query()
     .select(
-        crypto_quotes.best_bid_price,
-        crypto_quotes.best_ask_price,
-        abs(crypto_quotes.best_bid_price).alias("abs_bid"),
-        sqrt(crypto_quotes.best_bid_price).alias("sqrt_bid"),
-        round(crypto_quotes.best_bid_price, 2).alias("rounded_bid"),
-        floor(crypto_quotes.best_bid_price).alias("floor_bid"),
-        ceil(crypto_quotes.best_ask_price).alias("ceil_ask")
+        table.best_bid_price,
+        table.best_ask_price,
+        abs(table.best_bid_price).alias("abs_bid"),
+        sqrt(table.best_bid_price).alias("sqrt_bid"),
+        round(table.best_bid_price, 2).alias("rounded_bid"),
+        floor(table.best_bid_price).alias("floor_bid"),
+        ceil(table.best_ask_price).alias("ceil_ask")
     )
-    .where(crypto_quotes.pair == "BTC-USDT")
-    .where(crypto_quotes.best_bid_price > 0)
+    .where(table.pair == "BTC-USDT")
+    .where(table.best_bid_price > 0)
     .limit(5)
     .to_list())
 ```
@@ -853,17 +837,17 @@ from chpy.functions import if_ as if_func, coalesce
 # Conditional logic
 results = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.best_bid_price,
-        crypto_quotes.best_ask_price,
+        table.pair,
+        table.best_bid_price,
+        table.best_ask_price,
         if_func(
-            crypto_quotes.best_bid_price > 50000,
+            table.best_bid_price > 50000,
             "high",
             "normal"
         ).alias("price_category"),
-        coalesce(crypto_quotes.best_bid_price, 0).alias("safe_bid")
+        coalesce(table.best_bid_price, 0).alias("safe_bid")
     )
-    .where(crypto_quotes.pair == "BTC-USDT")
+    .where(table.pair == "BTC-USDT")
     .limit(5)
     .to_list())
 ```
@@ -876,12 +860,12 @@ from chpy.functions import toString, toInt64, toFloat64
 # Convert types
 results = (table.query()
     .select(
-        crypto_quotes.pair,
-        toString(crypto_quotes.best_bid_price).alias("bid_as_string"),
-        toInt64(crypto_quotes.best_bid_price).alias("bid_as_int"),
-        toFloat64(crypto_quotes.best_bid_price).alias("bid_as_float")
+        table.pair,
+        toString(table.best_bid_price).alias("bid_as_string"),
+        toInt64(table.best_bid_price).alias("bid_as_int"),
+        toFloat64(table.best_bid_price).alias("bid_as_float")
     )
-    .where(crypto_quotes.pair == "BTC-USDT")
+    .where(table.pair == "BTC-USDT")
     .limit(3)
     .to_list())
 ```
@@ -892,17 +876,17 @@ results = (table.query()
 # Combine different function types in one query
 results = (table.query()
     .select(
-        upper(crypto_quotes.pair).alias("pair_upper"),
-        length(crypto_quotes.pair).alias("pair_length"),
-        round(crypto_quotes.best_bid_price, 2).alias("rounded_price"),
-        toYear(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("year"),
+        upper(table.pair).alias("pair_upper"),
+        length(table.pair).alias("pair_length"),
+        round(table.best_bid_price, 2).alias("rounded_price"),
+        toYear(toDateTime(divide(table.timestamp_ms, 1000))).alias("year"),
         if_func(
-            crypto_quotes.best_bid_price > 50000,
+            table.best_bid_price > 50000,
             "premium",
             "standard"
         ).alias("tier")
     )
-    .where(crypto_quotes.pair == "BTC-USDT")
+    .where(table.pair == "BTC-USDT")
     .limit(3)
     .to_list())
 ```
@@ -912,7 +896,7 @@ results = (table.query()
 ```python
 # Use raw SQL for complex conditions
 results = (table.query()
-    .where(crypto_quotes.pair == "BTC-USDT")
+    .where(table.pair == "BTC-USDT")
     .where("best_bid_price > 50000 AND best_ask_price < 60000")
     .where("timestamp_ms >= toUnixTimestamp(now()) * 1000 - 86400000")
     .limit(10)
@@ -922,29 +906,29 @@ results = (table.query()
 ### Example 23: Working with Generic Tables
 
 ```python
-from chpy import ClickHouseClient, TableWrapper
-from chpy.orm import Table, Column
+from chpy import ClickHouseClient
+from chpy.tables import Table
+from chpy.orm import Column
+from chpy.types import UInt64, String, Float64, DateTime
 
-# Create a schema for any table
-columns = [
-    Column("id", "UInt64"),
-    Column("name", "String"),
-    Column("value", "Float64"),
-    Column("created_at", "DateTime")
-]
-schema = Table("my_table", "my_db", columns)
+# Define a custom table with Django-style columns
+class MyTable(Table):
+    id = Column("id", UInt64)
+    name = Column("name", String)
+    value = Column("value", Float64)
+    created_at = Column("created_at", DateTime)
 
-# Create wrapper with schema
+# Create wrapper
 client = ClickHouseClient(host="localhost", database="my_db")
-table = TableWrapper(client, "my_table", "my_db", schema=schema)
+table = MyTable(client, "my_table", "my_db")
 
-# Query with type-safe columns
+# Query with direct column access (type-safe)
 df = (table.query()
-    .where(schema.id > 100)
-    .where(schema.name == "test")
+    .where(table.id > 100)
+    .where(table.name == "test")
     .to_dataframe())
 
-# Or query without schema (using raw strings)
+# Or query with raw strings
 df = (table.query()
     .where("id > 100")
     .where("name = 'test'")
@@ -976,28 +960,28 @@ other_table = Table("market_data", "stockhouse", other_table_columns)
 # INNER JOIN with column expressions
 result = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.best_bid_price,
+        table.pair,
+        table.best_bid_price,
         other_table.name,
         other_table.market_cap
     )
     .join(
         other_table,
-        condition=(crypto_quotes.pair == other_table.symbol),
+        condition=(table.pair == other_table.symbol),
         join_type="INNER"
     )
-    .where(crypto_quotes.exchange == "BINANCE")
+    .where(table.exchange == "BINANCE")
     .to_dataframe())
 
 # LEFT JOIN with alias
 result = (table.query()
     .select(
-        crypto_quotes.pair,
+        table.pair,
         other_table.market_cap
     )
     .join(
         other_table,
-        condition=(crypto_quotes.pair == other_table.symbol),
+        condition=(table.pair == other_table.symbol),
         join_type="LEFT",
         alias="md"
     )
@@ -1005,10 +989,10 @@ result = (table.query()
 
 # Multiple JOINs
 result = (table.query()
-    .join(other_table, condition=(crypto_quotes.pair == other_table.symbol))
+    .join(other_table, condition=(table.pair == other_table.symbol))
     .join(
         "stockhouse.exchanges",
-        condition="crypto_quotes.exchange = exchanges.code",
+        condition="table.exchange = exchanges.code",
         join_type="LEFT"
     )
     .to_dataframe())
@@ -1030,10 +1014,10 @@ from chpy.functions.aggregate import avg, sum
 # Basic window function with PARTITION BY
 result = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.best_bid_price,
-        avg(crypto_quotes.best_bid_price).over(
-            WindowSpec().partition_by(crypto_quotes.pair)
+        table.pair,
+        table.best_bid_price,
+        avg(table.best_bid_price).over(
+            WindowSpec().partition_by(table.pair)
         ).alias("avg_by_pair")
     )
     .to_dataframe())
@@ -1041,12 +1025,12 @@ result = (table.query()
 # Window function with ORDER BY
 result = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.best_bid_price,
+        table.pair,
+        table.best_bid_price,
         rank().over(
             WindowSpec()
-                .partition_by(crypto_quotes.pair)
-                .order_by(crypto_quotes.best_bid_price, desc=True)
+                .partition_by(table.pair)
+                .order_by(table.best_bid_price, desc=True)
         ).alias("price_rank")
     )
     .to_dataframe())
@@ -1054,31 +1038,31 @@ result = (table.query()
 # Running average with frame specification
 result = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.timestamp_ms,
-        crypto_quotes.best_bid_price,
-        avg(crypto_quotes.best_bid_price).over(
+        table.pair,
+        table.timestamp_ms,
+        table.best_bid_price,
+        avg(table.best_bid_price).over(
             WindowSpec()
-                .partition_by(crypto_quotes.pair)
-                .order_by(crypto_quotes.timestamp_ms)
+                .partition_by(table.pair)
+                .order_by(table.timestamp_ms)
                 .rows_between("UNBOUNDED PRECEDING", "CURRENT ROW")
         ).alias("running_avg")
     )
-    .where(crypto_quotes.exchange == "BINANCE")
+    .where(table.exchange == "BINANCE")
     .to_dataframe())
 
 # Multiple window functions in same query
 result = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.exchange,
-        avg(crypto_quotes.best_bid_price).over(
-            WindowSpec().partition_by(crypto_quotes.pair)
+        table.pair,
+        table.exchange,
+        avg(table.best_bid_price).over(
+            WindowSpec().partition_by(table.pair)
         ).alias("avg_by_pair"),
         rowNumber().over(
             WindowSpec()
-                .partition_by(crypto_quotes.exchange)
-                .order_by(crypto_quotes.timestamp_ms)
+                .partition_by(table.exchange)
+                .order_by(table.timestamp_ms)
         ).alias("row_num")
     )
     .to_dataframe())
@@ -1086,15 +1070,15 @@ result = (table.query()
 # Window functions with GROUP BY
 result = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.exchange,
-        avg(crypto_quotes.best_bid_price).over(
-            WindowSpec().partition_by(crypto_quotes.pair)
+        table.pair,
+        table.exchange,
+        avg(table.best_bid_price).over(
+            WindowSpec().partition_by(table.pair)
         ).alias("window_avg"),
-        avg(crypto_quotes.best_bid_price).alias("group_avg")
+        avg(table.best_bid_price).alias("group_avg")
     )
-    .where(crypto_quotes.exchange == "BINANCE")
-    .group_by(crypto_quotes.pair, crypto_quotes.exchange)
+    .where(table.exchange == "BINANCE")
+    .group_by(table.pair, table.exchange)
     .to_dataframe())
 ```
 
@@ -1105,32 +1089,32 @@ from chpy.orm import Subquery
 
 # Scalar subquery in SELECT
 subquery_builder = (table.query()
-    .select(avg(crypto_quotes.best_bid_price))
-    .where(crypto_quotes.pair == "BTC-USDT"))
+    .select(avg(table.best_bid_price))
+    .where(table.pair == "BTC-USDT"))
 
 result = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.best_bid_price,
+        table.pair,
+        table.best_bid_price,
         Subquery(subquery_builder).alias("avg_btc_price")
     )
-    .where(crypto_quotes.pair == "ETH-USDT")
+    .where(table.pair == "ETH-USDT")
     .to_list())
 
 # Subquery in WHERE with IN
 subquery_builder = (table.query()
-    .select(crypto_quotes.pair)
-    .where(crypto_quotes.exchange == "BINANCE")
-    .group_by(crypto_quotes.pair)
+    .select(table.pair)
+    .where(table.exchange == "BINANCE")
+    .group_by(table.pair)
     .having("count() > 100"))
 
 result = (table.query()
-    .where(crypto_quotes.pair.in_(Subquery(subquery_builder)))
+    .where(table.pair.in_(Subquery(subquery_builder)))
     .to_list())
 
 # EXISTS subquery
 subquery_builder = (table.query()
-    .where(crypto_quotes.exchange == "BINANCE"))
+    .where(table.exchange == "BINANCE"))
 
 result = (table.query()
     .where(Subquery.exists(subquery_builder))
@@ -1139,10 +1123,10 @@ result = (table.query()
 # Derived table (subquery in FROM)
 subquery_builder = (table.query()
     .select(
-        crypto_quotes.pair,
-        avg(crypto_quotes.best_bid_price).alias("avg_price")
+        table.pair,
+        avg(table.best_bid_price).alias("avg_price")
     )
-    .group_by(crypto_quotes.pair))
+    .group_by(table.pair))
 
 result = (table.query()
     .from_subquery(Subquery(subquery_builder), alias="avg_prices")
@@ -1356,7 +1340,7 @@ table = Table("my_table", "my_db", columns)
 # Row objects support both attribute and dictionary access
 
 results = (table.query()
-    .where(crypto_quotes.pair == "BTC-USDT")
+    .where(table.pair == "BTC-USDT")
     .limit(5)
     .to_list())
 
@@ -1384,17 +1368,17 @@ from chpy.functions import (
 # Advanced aggregations
 results = (table.query()
     .select(
-        crypto_quotes.pair,
-        avg(crypto_quotes.best_bid_price).alias("avg_price"),
-        quantile(0.5)(crypto_quotes.best_bid_price).alias("median_price"),
-        quantile(0.95)(crypto_quotes.best_bid_price).alias("p95_price"),
-        stddevPop(crypto_quotes.best_bid_price).alias("stddev"),
-        argMin(crypto_quotes.timestamp_ms, crypto_quotes.best_bid_price).alias("min_price_time"),
-        topK(5)(crypto_quotes.exchange).alias("top_exchanges"),
-        uniq(crypto_quotes.exchange).alias("unique_exchanges")
+        table.pair,
+        avg(table.best_bid_price).alias("avg_price"),
+        quantile(0.5)(table.best_bid_price).alias("median_price"),
+        quantile(0.95)(table.best_bid_price).alias("p95_price"),
+        stddevPop(table.best_bid_price).alias("stddev"),
+        argMin(table.timestamp_ms, table.best_bid_price).alias("min_price_time"),
+        topK(5)(table.exchange).alias("top_exchanges"),
+        uniq(table.exchange).alias("unique_exchanges")
     )
-    .where(crypto_quotes.timestamp_ms >= datetime.now() - timedelta(days=7))
-    .group_by(crypto_quotes.pair)
+    .where(table.timestamp_ms >= datetime.now() - timedelta(days=7))
+    .group_by(table.pair)
     .to_list())
 ```
 
@@ -1409,16 +1393,16 @@ from chpy.functions import (
 # Working with array columns
 results = (table.query()
     .select(
-        crypto_quotes.pair,
-        crypto_quotes.bid_prices,
-        arraySum(crypto_quotes.bid_prices).alias("total_bids"),
-        arrayAvg(crypto_quotes.bid_prices).alias("avg_bid"),
-        arrayMax(crypto_quotes.bid_prices).alias("max_bid"),
-        arrayMin(crypto_quotes.bid_prices).alias("min_bid"),
-        arrayElement(crypto_quotes.bid_prices, 1).alias("first_bid"),
-        has(crypto_quotes.bid_prices, 50000).alias("has_50k")
+        table.pair,
+        table.bid_prices,
+        arraySum(table.bid_prices).alias("total_bids"),
+        arrayAvg(table.bid_prices).alias("avg_bid"),
+        arrayMax(table.bid_prices).alias("max_bid"),
+        arrayMin(table.bid_prices).alias("min_bid"),
+        arrayElement(table.bid_prices, 1).alias("first_bid"),
+        has(table.bid_prices, 50000).alias("has_50k")
     )
-    .where(crypto_quotes.pair == "BTC-USDT")
+    .where(table.pair == "BTC-USDT")
     .limit(5)
     .to_list())
 ```
@@ -1434,18 +1418,18 @@ from chpy.functions import (
 # Time-based aggregations
 results = (table.query()
     .select(
-        toStartOfHour(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("hour"),
-        crypto_quotes.pair,
-        avg(crypto_quotes.best_bid_price).alias("avg_price"),
-        min(crypto_quotes.best_bid_price).alias("min_price"),
-        max(crypto_quotes.best_bid_price).alias("max_price"),
+        toStartOfHour(toDateTime(divide(table.timestamp_ms, 1000))).alias("hour"),
+        table.pair,
+        avg(table.best_bid_price).alias("avg_price"),
+        min(table.best_bid_price).alias("min_price"),
+        max(table.best_bid_price).alias("max_price"),
         count().alias("quote_count")
     )
-    .where(crypto_quotes.pair == "BTC-USDT")
-    .where(crypto_quotes.timestamp_ms >= datetime.now() - timedelta(days=7))
+    .where(table.pair == "BTC-USDT")
+    .where(table.timestamp_ms >= datetime.now() - timedelta(days=7))
     .group_by(
-        toStartOfHour(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))),
-        crypto_quotes.pair
+        toStartOfHour(toDateTime(divide(table.timestamp_ms, 1000))),
+        table.pair
     )
     .order_by("hour", desc=True)
     .to_dataframe())

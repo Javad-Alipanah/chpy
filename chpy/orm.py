@@ -5,6 +5,7 @@ Provides column objects for autocomplete and type safety.
 
 from typing import Any, Optional, Union, List, TYPE_CHECKING
 from datetime import datetime
+import inspect
 
 if TYPE_CHECKING:
     from chpy.query_builder import QueryBuilder
@@ -92,7 +93,7 @@ class Column:
             type_: Column type (e.g., "String", "Float64", "UInt64") or TypeBuilder instance
             table: Optional parent table
         """
-        self.name = name
+        self._name = name
         # Convert TypeBuilder to string if needed
         if isinstance(type_, str):
             self.type = type_
@@ -108,7 +109,17 @@ class Column:
             except ImportError:
                 # Fallback: if it's not a string, try to convert it
                 self.type = str(type_)
-        self.table = table
+        self._table = table
+    
+    @property
+    def name(self) -> str:
+        """Get the column name."""
+        return self._name
+    
+    @property
+    def table(self) -> Optional['Table']:
+        """Get the parent table."""
+        return self._table
     
     def __eq__(self, other: Any) -> 'ColumnExpression':
         """Create equality expression: column == value"""
@@ -148,15 +159,15 @@ class Column:
     
     def __str__(self) -> str:
         """String representation returns column name, table-qualified if table is available."""
-        if self.table:
-            return f"{self.table.full_name}.{self.name}"
-        return self.name
+        if self._table:
+            return f"{self._table._qualified_name}.{self._name}"
+        return self._name
     
     def __repr__(self) -> str:
         """Representation includes table name if available."""
-        if self.table:
-            return f"{self.table.name}.{self.name}"
-        return self.name
+        if self._table:
+            return f"{self._table._table_name}.{self._name}"
+        return self._name
 
 
 class Subquery:
@@ -291,7 +302,7 @@ class ColumnExpression:
         """
         # Use table-qualified column name if table is available, or use base table if provided
         if self.column.table:
-            col_name = f"{self.column.table.full_name}.{self.column.name}"
+            col_name = f"{self.column.table._qualified_name}.{self.column.name}"
         elif base_table_name:
             col_name = f"{base_table_name}.{self.column.name}"
         else:
@@ -336,7 +347,7 @@ class ColumnExpression:
             if isinstance(self.value, Column):
                 # If comparing two columns, use table-qualified name for the value column too
                 if self.value.table:
-                    value_str = f"{self.value.table.full_name}.{self.value.name}"
+                    value_str = f"{self.value.table._qualified_name}.{self.value.name}"
                 elif base_table_name:
                     value_str = f"{base_table_name}.{self.value.name}"
                 else:
@@ -437,16 +448,31 @@ class Table:
             database: Database name
             columns: List of Column objects
         """
-        self.name = name
-        self.database = database
-        self.full_name = f"{database}.{name}"
+        self._table_name = name
+        self._db_name = database
+        self._qualified_name = f"{database}.{name}"
+        
+        # Sort columns alphabetically before processing to ensure consistent ordering
+        # This helps VS Code/Pylance show columns in a predictable order
+        sorted_columns = sorted(columns, key=lambda col: col.name)
+        
+        # Initialize _columns first to avoid recursion in __getattr__
+        # Build from sorted columns so dict insertion order is alphabetical (Python 3.7+)
+        self._columns = {col.name: col for col in sorted_columns}
         
         # Create column attributes dynamically
-        for col in columns:
-            col.table = self
-            setattr(self, col.name, col)
+        # Also set __annotations__ to help type checkers and IDEs with autocomplete
+        # Use __dict__ to avoid triggering __getattr__
+        if '__annotations__' not in self.__dict__:
+            self.__annotations__ = {}
         
-        self._columns = {col.name: col for col in columns}
+        for col in sorted_columns:
+            col._table = self
+            # Use __dict__ directly to bypass property setters (in case column name conflicts with property names)
+            self.__dict__[col.name] = col
+            # Add type annotation for autocomplete support
+            # Python 3.7+ preserves dict insertion order, so columns will be in alphabetical order
+            self.__annotations__[col.name] = Column
     
     def get_column(self, name: str) -> Optional[Column]:
         """Get a column by name."""
@@ -459,10 +485,139 @@ class Table:
     def __getitem__(self, name: str) -> Column:
         """Get column by name using bracket notation."""
         if name not in self._columns:
-            raise AttributeError(f"Column '{name}' not found in table '{self.name}'")
+            raise AttributeError(f"Column '{name}' not found in table '{self._table_name}'")
         return self._columns[name]
+    
+    def __getattribute__(self, name: str):
+        """
+        Override to check columns first before properties.
+        This ensures columns can override property names (e.g., a column named 'name').
+        """
+        # Check if this is a column first (before properties are checked)
+        # Use object.__getattribute__ to avoid recursion
+        try:
+            columns = object.__getattribute__(self, '_columns')
+            if name in columns:
+                return columns[name]
+        except AttributeError:
+            # _columns doesn't exist yet (during __init__)
+            pass
+        
+        # Fall back to normal attribute access (includes properties)
+        return object.__getattribute__(self, name)
+    
+    def __getattr__(self, name: str) -> Column:
+        """
+        Get column by attribute name (fallback if not found in __getattribute__).
+        This enables autocomplete for column access.
+        """
+        # Use __dict__ to access _columns to avoid recursion
+        # Only check _columns if it exists (should always exist after __init__)
+        columns = self.__dict__.get('_columns', {})
+        if name in columns:
+            return columns[name]
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+    
+    def __dir__(self) -> List[str]:
+        """
+        Return list of available attributes including column names.
+        This helps IDEs provide autocomplete suggestions.
+        Order: columns (alphabetically) -> attributes (alphabetically) -> methods (alphabetically)
+        
+        Non-column attributes are private (prefixed with `_`) so that when VS Code sorts
+        alphabetically, columns (which start with letters) will appear before private attributes
+        (which start with `_`), achieving the desired ordering.
+        """
+        # Get column names - use __dict__ to avoid recursion
+        # Columns are already sorted alphabetically when set in __init__
+        columns = self.__dict__.get('_columns', {})
+        column_names = sorted(columns.keys())  # Ensure alphabetical order
+        
+        # Get standard attributes from parent
+        try:
+            standard_attrs = list(super().__dir__())
+        except AttributeError:
+            standard_attrs = []
+        
+        # Remove column names and internal attributes from standard_attrs to avoid duplicates
+        # Also filter out common internal attributes that shouldn't appear in autocomplete
+        internal_attrs = {'_columns', '__dict__', '__weakref__', '__annotations__'}
+        other_attrs = [
+            attr for attr in standard_attrs 
+            if attr not in columns and attr not in internal_attrs
+        ]
+        
+        # Separate attributes from methods
+        attributes = []
+        methods = []
+        
+        for attr in other_attrs:
+            # Handle private attributes (starting with single underscore)
+            if attr.startswith('_') and not attr.startswith('__'):
+                attributes.append(attr)
+                continue
+            
+            # Handle dunder methods (special methods like __repr__, __str__, etc.)
+            if attr.startswith('__') and attr.endswith('__'):
+                methods.append(attr)
+                continue
+            
+            # Check if it's a method by inspecting the class
+            # Use getattr_static to avoid triggering __getattr__ or property accessors
+            try:
+                obj = inspect.getattr_static(self.__class__, attr, None)
+                if obj is not None:
+                    # Check if it's callable (method, function, builtin, or callable descriptor)
+                    if inspect.ismethod(obj) or inspect.isfunction(obj) or inspect.isbuiltin(obj):
+                        methods.append(attr)
+                    elif callable(obj):
+                        # Some descriptors might be callable, check if it's actually a method-like thing
+                        methods.append(attr)
+                    else:
+                        attributes.append(attr)
+                else:
+                    # Not found on class, check if it's in instance dict (likely an attribute)
+                    if attr in self.__dict__:
+                        attributes.append(attr)
+                    else:
+                        # Default to attribute if we can't determine
+                        attributes.append(attr)
+            except (AttributeError, TypeError):
+                # If we can't determine, treat as attribute
+                attributes.append(attr)
+        
+        # Return: columns first, then attributes, then methods (all alphabetically sorted)
+        # Note: VS Code/Pylance may sort __dir__ results alphabetically, mixing columns with other attributes.
+        # However, this ordering ensures that:
+        # 1. Other IDEs/tools that respect __dir__ order will show columns first
+        # 2. The order is deterministic and consistent
+        # For class-level column definitions (like CryptoQuotesTable), VS Code's static analysis
+        # will see them, but may still sort alphabetically. This is a limitation of VS Code's autocomplete.
+        result = sorted(column_names) + sorted(attributes) + sorted(methods)
+        return result
+    
+    @property
+    def table_name(self) -> str:
+        """Get the table name (without database qualification)."""
+        return self._table_name
+    
+    @property
+    def db_name(self) -> str:
+        """Get the database name."""
+        return self._db_name
+    
+    @property
+    def qualified_name(self) -> str:
+        """Get the qualified table name (database.table)."""
+        return self._qualified_name
     
     def __repr__(self) -> str:
         """String representation."""
-        return f"Table({self.full_name})"
+        return f"Table({self._qualified_name})"
+    
+    def __eq__(self, other: Any) -> bool:
+        """Compare tables by qualified_name for equality."""
+        if not isinstance(other, Table):
+            return False
+        return self._qualified_name == other._qualified_name
 

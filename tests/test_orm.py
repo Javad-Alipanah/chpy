@@ -318,9 +318,9 @@ class TestTable:
         ]
         table = Table("test_table", "test_db", columns)
         
-        assert table.name == "test_table"
-        assert table.database == "test_db"
-        assert table.full_name == "test_db.test_table"
+        assert table.table_name == "test_table"
+        assert table.db_name == "test_db"
+        assert table.qualified_name == "test_db.test_table"
         assert len(table._columns) == 2
     
     def test_column_access(self):

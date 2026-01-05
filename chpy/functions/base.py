@@ -235,6 +235,50 @@ class Function:
     def __repr__(self) -> str:
         """Representation."""
         return f"Function({self.to_sql()})"
+    
+    def __add__(self, other: Any) -> 'Function':
+        """Create addition expression: function + value or function + function"""
+        return Function("plus", self, other)
+    
+    def __radd__(self, other: Any) -> 'Function':
+        """Create reverse addition expression: value + function"""
+        return Function("plus", other, self)
+    
+    def __sub__(self, other: Any) -> 'Function':
+        """Create subtraction expression: function - value or function - function"""
+        return Function("minus", self, other)
+    
+    def __rsub__(self, other: Any) -> 'Function':
+        """Create reverse subtraction expression: value - function"""
+        return Function("minus", other, self)
+    
+    def __mul__(self, other: Any) -> 'Function':
+        """Create multiplication expression: function * value or function * function"""
+        return Function("multiply", self, other)
+    
+    def __rmul__(self, other: Any) -> 'Function':
+        """Create reverse multiplication expression: value * function"""
+        return Function("multiply", other, self)
+    
+    def __truediv__(self, other: Any) -> 'Function':
+        """Create division expression: function / value or function / function"""
+        return Function("divide", self, other)
+    
+    def __rtruediv__(self, other: Any) -> 'Function':
+        """Create reverse division expression: value / function"""
+        return Function("divide", other, self)
+    
+    def __mod__(self, other: Any) -> 'Function':
+        """Create modulo expression: function % value or function % function"""
+        return Function("modulo", self, other)
+    
+    def __rmod__(self, other: Any) -> 'Function':
+        """Create reverse modulo expression: value % function"""
+        return Function("modulo", other, self)
+    
+    def __neg__(self) -> 'Function':
+        """Create negation expression: -function"""
+        return Function("negate", self)
 
 
 class AggregateFunction:
@@ -355,6 +399,50 @@ class AggregateFunction:
     def __repr__(self) -> str:
         """Representation."""
         return f"AggregateFunction({self.to_sql()})"
+    
+    def __add__(self, other: Any) -> 'Function':
+        """Create addition expression: aggregate_function + value or aggregate_function + aggregate_function"""
+        return Function("plus", self, other)
+    
+    def __radd__(self, other: Any) -> 'Function':
+        """Create reverse addition expression: value + aggregate_function"""
+        return Function("plus", other, self)
+    
+    def __sub__(self, other: Any) -> 'Function':
+        """Create subtraction expression: aggregate_function - value or aggregate_function - aggregate_function"""
+        return Function("minus", self, other)
+    
+    def __rsub__(self, other: Any) -> 'Function':
+        """Create reverse subtraction expression: value - aggregate_function"""
+        return Function("minus", other, self)
+    
+    def __mul__(self, other: Any) -> 'Function':
+        """Create multiplication expression: aggregate_function * value or aggregate_function * aggregate_function"""
+        return Function("multiply", self, other)
+    
+    def __rmul__(self, other: Any) -> 'Function':
+        """Create reverse multiplication expression: value * aggregate_function"""
+        return Function("multiply", other, self)
+    
+    def __truediv__(self, other: Any) -> 'Function':
+        """Create division expression: aggregate_function / value or aggregate_function / aggregate_function"""
+        return Function("divide", self, other)
+    
+    def __rtruediv__(self, other: Any) -> 'Function':
+        """Create reverse division expression: value / aggregate_function"""
+        return Function("divide", other, self)
+    
+    def __mod__(self, other: Any) -> 'Function':
+        """Create modulo expression: aggregate_function % value or aggregate_function % aggregate_function"""
+        return Function("modulo", self, other)
+    
+    def __rmod__(self, other: Any) -> 'Function':
+        """Create reverse modulo expression: value % aggregate_function"""
+        return Function("modulo", other, self)
+    
+    def __neg__(self) -> 'Function':
+        """Create negation expression: -aggregate_function"""
+        return Function("negate", self)
 
 
 # Export WindowSpec for convenience

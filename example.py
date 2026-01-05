@@ -28,7 +28,7 @@ from chpy.functions import (
     toMinute, toSecond, toDayOfWeek, toQuarter,
     dateDiff, addHours, subtractHours, addMinutes, formatDateTime,
     # Math functions
-    abs, sqrt, round, floor, ceil, divide, plus, minus, multiply,
+    abs, sqrt, round, floor, ceil,
     log, log2, log10, exp, pow, power, sin, cos, tan, asin, acos, atan,
     # Type conversion
     toString, toInt64, toFloat64, toDateTime, toDate,
@@ -461,10 +461,10 @@ def example_27_date_time_functions(table):
     result = (table.query()
         .select(
             crypto_quotes.timestamp_ms,
-            toYear(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("year"),
-            toMonth(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("month"),
-            toDayOfMonth(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("day"),
-            toHour(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("hour")
+            toYear(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("year"),
+            toMonth(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("month"),
+            toDayOfMonth(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("day"),
+            toHour(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("hour")
         )
         .where(crypto_quotes.pair == "BTC-USDT")
         .limit(5)
@@ -566,8 +566,8 @@ def example_32_combined_functions(table):
             upper(crypto_quotes.pair).alias("pair_upper"),
             length(crypto_quotes.pair).alias("pair_length"),
             round(crypto_quotes.best_bid_price).alias("rounded_price"),
-            toYear(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("year"),
-            toMonth(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("month"),
+            toYear(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("year"),
+            toMonth(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("month"),
             if_func(
                 crypto_quotes.best_bid_price > 50000,
                 "premium",
@@ -867,12 +867,12 @@ def example_45_date_time_advanced(table):
     result = (table.query()
         .select(
             crypto_quotes.timestamp_ms,
-            toStartOfDay(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("start_of_day"),
-            toStartOfHour(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("start_of_hour"),
-            toStartOfMonth(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("start_of_month"),
-            toStartOfYear(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("start_of_year"),
-            toQuarter(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("quarter"),
-            toDayOfWeek(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("day_of_week")
+            toStartOfDay(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("start_of_day"),
+            toStartOfHour(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("start_of_hour"),
+            toStartOfMonth(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("start_of_month"),
+            toStartOfYear(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("start_of_year"),
+            toQuarter(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("quarter"),
+            toDayOfWeek(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("day_of_week")
         )
         .where(crypto_quotes.pair == "BTC-USDT")
         .limit(5)
@@ -889,13 +889,13 @@ def example_46_date_arithmetic(table):
     result = (table.query()
         .select(
             crypto_quotes.timestamp_ms,
-            toDateTime(divide(crypto_quotes.timestamp_ms, 1000)).alias("current_time"),
-            addHours(toDateTime(divide(crypto_quotes.timestamp_ms, 1000)), 1).alias("plus_one_hour"),
-            subtractHours(toDateTime(divide(crypto_quotes.timestamp_ms, 1000)), 2).alias("minus_two_hours"),
-            addMinutes(toDateTime(divide(crypto_quotes.timestamp_ms, 1000)), 30).alias("plus_thirty_min"),
+            toDateTime(crypto_quotes.timestamp_ms / 1000).alias("current_time"),
+            addHours(toDateTime(crypto_quotes.timestamp_ms / 1000), 1).alias("plus_one_hour"),
+            subtractHours(toDateTime(crypto_quotes.timestamp_ms / 1000), 2).alias("minus_two_hours"),
+            addMinutes(toDateTime(crypto_quotes.timestamp_ms / 1000), 30).alias("plus_thirty_min"),
             dateDiff(
                 "hour",
-                toDateTime(divide(crypto_quotes.timestamp_ms, 1000)),
+                toDateTime(crypto_quotes.timestamp_ms / 1000),
                 now()
             ).alias("hours_since_quote")
         )
@@ -916,7 +916,7 @@ def example_47_math_advanced(table):
             crypto_quotes.best_bid_price,
             log(crypto_quotes.best_bid_price).alias("log_price"),
             log10(crypto_quotes.best_bid_price).alias("log10_price"),
-            exp(divide(crypto_quotes.best_bid_price, 100000)).alias("exp_scaled"),
+            exp(crypto_quotes.best_bid_price / 100000).alias("exp_scaled"),
             pow(crypto_quotes.best_bid_price, 0.5).alias("sqrt_equivalent"),
             power(crypto_quotes.best_bid_price, 2).alias("price_squared")
         )
@@ -936,11 +936,11 @@ def example_48_trigonometric_functions(table):
     result = (table.query()
         .select(
             crypto_quotes.best_bid_price,
-            sin(divide(crypto_quotes.best_bid_price, 100000)).alias("sin_scaled"),
-            cos(divide(crypto_quotes.best_bid_price, 100000)).alias("cos_scaled"),
-            tan(divide(crypto_quotes.best_bid_price, 100000)).alias("tan_scaled"),
-            asin(divide(crypto_quotes.best_bid_price, 1000000)).alias("arcsin_scaled"),
-            atan(divide(crypto_quotes.best_bid_price, 100000)).alias("arctan_scaled")
+            sin(crypto_quotes.best_bid_price / 100000).alias("sin_scaled"),
+            cos(crypto_quotes.best_bid_price / 100000).alias("cos_scaled"),
+            tan(crypto_quotes.best_bid_price / 100000).alias("tan_scaled"),
+            asin(crypto_quotes.best_bid_price / 1000000).alias("arcsin_scaled"),
+            atan(crypto_quotes.best_bid_price / 100000).alias("arctan_scaled")
         )
         .where(crypto_quotes.pair == "BTC-USDT")
         .where(crypto_quotes.best_bid_price > 0)
@@ -1278,8 +1278,8 @@ def example_61_running_functions(table):
                 .order_by(crypto_quotes.timestamp_ms, desc=False)
                 .rows_between("UNBOUNDED PRECEDING", "CURRENT ROW")
             ).alias("running_sum"),
-            minus(
-                crypto_quotes.best_bid_price,
+            (
+                crypto_quotes.best_bid_price -
                 lagInFrame(crypto_quotes.best_bid_price, 1, 0).over(
                     WindowSpec()
                     .partition_by(crypto_quotes.pair)
@@ -1336,12 +1336,10 @@ def example_63_price_spread_analysis(table):
             crypto_quotes.exchange,
             avg(crypto_quotes.best_bid_price).alias("avg_bid"),
             avg(crypto_quotes.best_ask_price).alias("avg_ask"),
-            minus(avg(crypto_quotes.best_ask_price), avg(crypto_quotes.best_bid_price)).alias("avg_spread"),
-            multiply(
-                divide(
-                    minus(avg(crypto_quotes.best_ask_price), avg(crypto_quotes.best_bid_price)),
-                    avg(crypto_quotes.best_bid_price)
-                ),
+            (avg(crypto_quotes.best_ask_price) - avg(crypto_quotes.best_bid_price)).alias("avg_spread"),
+            (
+                (avg(crypto_quotes.best_ask_price) - avg(crypto_quotes.best_bid_price)) /
+                avg(crypto_quotes.best_bid_price) *
                 100
             ).alias("spread_percentage")
         )
@@ -1353,7 +1351,7 @@ def example_63_price_spread_analysis(table):
         .to_list())
     print(f"   Found {len(result)} results with spread analysis")
     if result:
-        print(f"   Sample: {result[0]}")
+        print(f"   Sample: {result[4]}")
 
 
 def example_64_time_bucketing(table):
@@ -1362,7 +1360,7 @@ def example_64_time_bucketing(table):
     print("-" * 70)
     result = (table.query()
         .select(
-            toStartOfHour(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("hour"),
+            toStartOfHour(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("hour"),
             crypto_quotes.pair,
             avg(crypto_quotes.best_bid_price).alias("avg_bid"),
             min(crypto_quotes.best_bid_price).alias("min_bid"),

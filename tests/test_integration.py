@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
 from chpy import ClickHouseClient, CryptoQuotesTable, crypto_quotes
-from chpy.functions import avg, count, length, upper, toYear, toDateTime, divide
+from chpy.functions import avg, count, length, upper, toYear, toDateTime
 from chpy.query_builder import QueryBuilder
 
 
@@ -93,8 +93,8 @@ class TestIntegration:
         result = (table.query()
             .select(
                 crypto_quotes.timestamp_ms,
-                toYear(toDateTime(divide(crypto_quotes.timestamp_ms, 1000))).alias("year"),
-                toDateTime(divide(crypto_quotes.timestamp_ms, 1000)).alias("dt")
+                toYear(toDateTime(crypto_quotes.timestamp_ms / 1000)).alias("year"),
+                toDateTime(crypto_quotes.timestamp_ms / 1000).alias("dt")
             )
             .where(crypto_quotes.pair == "BTC-USDT")
             .limit(1)

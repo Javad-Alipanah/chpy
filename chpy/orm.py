@@ -157,6 +157,61 @@ class Column:
         """Create LIKE expression: column LIKE pattern"""
         return ColumnExpression(self, "LIKE", pattern)
     
+    def __add__(self, other: Any) -> Any:
+        """Create addition expression: column + value or column + column"""
+        from chpy.functions.base import Function
+        return Function("plus", self, other)
+    
+    def __radd__(self, other: Any) -> Any:
+        """Create reverse addition expression: value + column"""
+        from chpy.functions.base import Function
+        return Function("plus", other, self)
+    
+    def __sub__(self, other: Any) -> Any:
+        """Create subtraction expression: column - value or column - column"""
+        from chpy.functions.base import Function
+        return Function("minus", self, other)
+    
+    def __rsub__(self, other: Any) -> Any:
+        """Create reverse subtraction expression: value - column"""
+        from chpy.functions.base import Function
+        return Function("minus", other, self)
+    
+    def __mul__(self, other: Any) -> Any:
+        """Create multiplication expression: column * value or column * column"""
+        from chpy.functions.base import Function
+        return Function("multiply", self, other)
+    
+    def __rmul__(self, other: Any) -> Any:
+        """Create reverse multiplication expression: value * column"""
+        from chpy.functions.base import Function
+        return Function("multiply", other, self)
+    
+    def __truediv__(self, other: Any) -> Any:
+        """Create division expression: column / value or column / column"""
+        from chpy.functions.base import Function
+        return Function("divide", self, other)
+    
+    def __rtruediv__(self, other: Any) -> Any:
+        """Create reverse division expression: value / column"""
+        from chpy.functions.base import Function
+        return Function("divide", other, self)
+    
+    def __mod__(self, other: Any) -> Any:
+        """Create modulo expression: column % value or column % column"""
+        from chpy.functions.base import Function
+        return Function("modulo", self, other)
+    
+    def __rmod__(self, other: Any) -> Any:
+        """Create reverse modulo expression: value % column"""
+        from chpy.functions.base import Function
+        return Function("modulo", other, self)
+    
+    def __neg__(self) -> Any:
+        """Create negation expression: -column"""
+        from chpy.functions.base import Function
+        return Function("negate", self)
+    
     def __str__(self) -> str:
         """String representation returns column name, table-qualified if table is available."""
         if self._table:
